@@ -289,6 +289,13 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
+                <div class="toggle-container">
+                    <span>Everyone</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="everyone-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
                 <button class="btn" id="refresh-btn" style="margin-left: auto;">Refresh Data</button>
             </div>
         </div>
@@ -361,6 +368,11 @@
             const teamMembers = getTeamMembers();
             const dateFilter = getDateFilter();
             const dateGrouping = getDateGrouping();
+            const isEveryone = document.getElementById('everyone-toggle').checked;
+
+            // Build actor filter - either specific team members or everyone
+            const actorFilter = isEveryone ? '' : `AND actor_login IN (${teamMembers.map(m => `'${m}'`).join(', ')})`;
+
             const query = `
 WITH repo_name LIKE 'ClickHouse/%' AS repos_condition
 SELECT
@@ -375,7 +387,7 @@ SELECT
     uniqIf(number, event_type = 'IssueCommentEvent' AND action = 'created') AS comments
 FROM github_events
 WHERE repos_condition
-    AND actor_login IN (${teamMembers.map(m => `'${m}'`).join(', ')})
+    ${actorFilter}
     ${dateFilter}
 GROUP BY actor_login, d
 ORDER BY actor_login, d
@@ -399,7 +411,7 @@ ORDER BY actor_login, d
 
         function processData(data) {
             const processed = {};
-            const teamMembers = getTeamMembers();
+            const isEveryone = document.getElementById('everyone-toggle').checked;
 
             // Get all unique dates
             const allDates = new Set();
@@ -408,7 +420,22 @@ ORDER BY actor_login, d
             });
             const sortedDates = Array.from(allDates).sort();
 
-            teamMembers.forEach(member => {
+            // Get list of members to process
+            let membersToProcess;
+            if (isEveryone) {
+                // Get all unique actor_logins from the data
+                const allActors = new Set();
+                data.forEach(row => {
+                    if (row.actor_login) {
+                        allActors.add(row.actor_login);
+                    }
+                });
+                membersToProcess = Array.from(allActors);
+            } else {
+                membersToProcess = getTeamMembers();
+            }
+
+            membersToProcess.forEach(member => {
                 const memberMap = {};
                 data.filter(row => row.actor_login === member).forEach(row => {
                     memberMap[row.d] = row;
@@ -622,6 +649,8 @@ ORDER BY actor_login, d
         document.getElementById('refresh-btn').addEventListener('click', loadData);
 
         document.getElementById('alexey-toggle').addEventListener('change', loadData);
+
+        document.getElementById('everyone-toggle').addEventListener('change', loadData);
 
         // Initial load
         loadData();
