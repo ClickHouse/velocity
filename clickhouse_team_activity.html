@@ -485,11 +485,13 @@ ORDER BY actor_login, d
                 return totalB - totalA;
             });
 
-            // Calculate maximum total for percentage and bar calculations
+            // Calculate maximum total for bar calculations and sum for percentages
             let maxTotal = 0;
+            let sumTotal = 0;
             sortedMembers.forEach(member => {
                 const total = getTotalActivity(allData[member], metric);
                 if (total > maxTotal) maxTotal = total;
+                sumTotal += total;
             });
 
             sortedMembers.forEach(member => {
@@ -505,8 +507,8 @@ ORDER BY actor_login, d
                 nameDiv.className = 'author-name';
                 nameDiv.textContent = member;
 
-                // Calculate percentage
-                const percentage = maxTotal > 0 ? (total / maxTotal * 100).toFixed(1) : 0;
+                // Calculate percentage relative to sum, bar width relative to max
+                const percentage = sumTotal > 0 ? (total / sumTotal * 100).toFixed(1) : 0;
                 const barWidth = maxTotal > 0 ? (total / maxTotal * 100) : 0;
 
                 const statsDiv = document.createElement('div');
