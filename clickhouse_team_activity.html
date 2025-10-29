@@ -273,6 +273,7 @@
                 <button class="btn" data-metric="closed_issues">Closed Issues</button>
                 <button class="btn" data-metric="reviewed_prs">Reviewed PRs</button>
                 <button class="btn" data-metric="opened_prs">Opened PRs</button>
+                <button class="btn" data-metric="all_activity">All activity</button>
             </div>
             <div class="controls-row">
                 <span class="time-range-label">Time Range:</span>
@@ -342,7 +343,8 @@
             'opened_prs': 'Opened PRs',
             'reviewed_prs': 'Reviewed PRs',
             'closed_issues': 'Closed Issues',
-            'comments': 'Comments'
+            'comments': 'Comments',
+            'all_activity': 'All activity'
         };
 
         function getDateFilter() {
@@ -384,7 +386,8 @@ SELECT
         AND ((event_type = 'PullRequestEvent' AND actor_login = assignee AND action = 'closed')
             OR (event_type = 'PullRequestReviewEvent' AND review_state = 'approved'))) AS reviewed_prs,
     uniqIf(number, event_type = 'IssuesEvent' AND action = 'closed') AS closed_issues,
-    uniqIf(number, event_type = 'IssueCommentEvent' AND action = 'created') AS comments
+    uniqIf(number, event_type = 'IssueCommentEvent' AND action = 'created') AS comments,
+    uniq(number) AS all_activity
 FROM github_events
 WHERE repos_condition
     ${actorFilter}
@@ -452,7 +455,8 @@ ORDER BY actor_login, d
                     opened_prs: sortedDates.map(d => memberMap[d]?.opened_prs || 0),
                     reviewed_prs: sortedDates.map(d => memberMap[d]?.reviewed_prs || 0),
                     closed_issues: sortedDates.map(d => memberMap[d]?.closed_issues || 0),
-                    comments: sortedDates.map(d => memberMap[d]?.comments || 0)
+                    comments: sortedDates.map(d => memberMap[d]?.comments || 0),
+                    all_activity: sortedDates.map(d => memberMap[d]?.all_activity || 0)
                 };
             });
 
