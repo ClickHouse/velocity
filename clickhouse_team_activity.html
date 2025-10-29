@@ -60,9 +60,9 @@
         }
 
         .btn.active {
-            background: #ff6b00;
+            background: #2171b5;
             color: #fff;
-            border-color: #ff6b00;
+            border-color: #2171b5;
         }
 
         .loading {
@@ -184,10 +184,10 @@
             <span>Horizon charts show activity over time (monthly aggregation) - color bands represent different activity levels</span>
             <div class="legend-scale">
                 <span>Low</span>
-                <div class="legend-band" style="background: #fee5d9;"></div>
-                <div class="legend-band" style="background: #fcbba1;"></div>
-                <div class="legend-band" style="background: #fc8d59;"></div>
-                <div class="legend-band" style="background: #e34a33;"></div>
+                <div class="legend-band" style="background: #eff3ff;"></div>
+                <div class="legend-band" style="background: #bdd7e7;"></div>
+                <div class="legend-band" style="background: #6baed6;"></div>
+                <div class="legend-band" style="background: #2171b5;"></div>
                 <span>High</span>
             </div>
         </div>
@@ -300,7 +300,7 @@ ORDER BY actor_login, d
                 .range([height, 0]);
 
             // Color scale for horizon bands
-            const colors = ['#fee5d9', '#fcbba1', '#fc8d59', '#e34a33'];
+            const colors = ['#eff3ff', '#bdd7e7', '#6baed6', '#2171b5'];
 
             // Create area generator
             const area = d3.area()
