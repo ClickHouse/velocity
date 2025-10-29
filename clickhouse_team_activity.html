@@ -227,10 +227,10 @@
         </header>
 
         <div class="controls">
-            <button class="btn active" data-metric="opened_prs">Opened PRs</button>
-            <button class="btn" data-metric="reviewed_prs">Reviewed PRs</button>
+            <button class="btn active" data-metric="comments">Comments</button>
             <button class="btn" data-metric="closed_issues">Closed Issues</button>
-            <button class="btn" data-metric="comments">Comments</button>
+            <button class="btn" data-metric="reviewed_prs">Reviewed PRs</button>
+            <button class="btn" data-metric="opened_prs">Opened PRs</button>
             <div class="toggle-container">
                 <span>With Alexey</span>
                 <label class="toggle-switch">
@@ -275,7 +275,7 @@
             return includeAlexey ? ['alexey-milovidov', ...CORE_TEAM_MEMBERS] : CORE_TEAM_MEMBERS;
         }
 
-        let currentMetric = 'opened_prs';
+        let currentMetric = 'comments';
         let allData = null;
 
         const METRIC_LABELS = {
