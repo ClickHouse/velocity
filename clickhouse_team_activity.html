@@ -25,10 +25,6 @@
             margin: 0 auto;
         }
 
-        header {
-            margin-bottom: 30px;
-        }
-
         h1 {
             font-size: 2em;
             margin-bottom: 10px;
@@ -259,6 +255,36 @@
             transform: translateX(20px);
         }
 
+        .org-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .org-selector label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .org-selector input {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 150px;
+            font-family: inherit;
+        }
+
+        .org-selector input:focus {
+            outline: none;
+            border-color: #2171b5;
+        }
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -267,13 +293,36 @@
         .loading {
             animation: pulse 1.5s ease-in-out infinite;
         }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+        }
+
+        .header-left {
+            flex: 1;
+        }
+
+        .header-right {
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>ClickHouse Team Activity Dashboard</h1>
-            <p>Activity metrics for ClickHouse Core team members</p>
+            <div class="header-left">
+                <h1>ClickHouse Team Activity Dashboard</h1>
+                <p>Activity metrics for ClickHouse Core team members</p>
+            </div>
+            <div class="header-right">
+                <div class="org-selector">
+                    <label for="org-input">Organization:</label>
+                    <input type="text" id="org-input" value="ClickHouse" />
+                </div>
+            </div>
         </header>
 
         <div class="controls">
@@ -346,7 +395,22 @@
 
         let currentMetric = 'comments';
         let currentTimeRange = 'all'; // months, or 'all'
+        let currentOrg = 'ClickHouse';
         let allData = null;
+
+        function updateToggleVisibility() {
+            const isClickHouse = currentOrg === 'ClickHouse';
+            const alexeyToggle = document.getElementById('alexey-toggle').parentElement.parentElement;
+            const everyoneToggle = document.getElementById('everyone-toggle').parentElement.parentElement;
+
+            if (isClickHouse) {
+                alexeyToggle.style.display = '';
+                everyoneToggle.style.display = '';
+            } else {
+                alexeyToggle.style.display = 'none';
+                everyoneToggle.style.display = 'none';
+            }
+        }
 
         const METRIC_LABELS = {
             'opened_prs': 'Opened PRs',
@@ -379,13 +443,14 @@
             const teamMembers = getTeamMembers();
             const dateFilter = getDateFilter();
             const dateGrouping = getDateGrouping();
-            const isEveryone = document.getElementById('everyone-toggle').checked;
+            const isClickHouse = currentOrg === 'ClickHouse';
+            const isEveryone = isClickHouse ? document.getElementById('everyone-toggle').checked : true;
 
             // Build actor filter - either specific team members or everyone
             const actorFilter = isEveryone ? '' : `AND actor_login IN (${teamMembers.map(m => `'${m}'`).join(', ')})`;
 
             const query = `
-WITH repo_name LIKE 'ClickHouse/%' AS repos_condition
+WITH repo_name LIKE '${currentOrg}/%' AS repos_condition
 SELECT
     actor_login,
     ${dateGrouping} AS d,
@@ -428,7 +493,8 @@ ORDER BY actor_login, d
 
         function processData(data) {
             const processed = {};
-            const isEveryone = document.getElementById('everyone-toggle').checked;
+            const isClickHouse = currentOrg === 'ClickHouse';
+            const isEveryone = isClickHouse ? document.getElementById('everyone-toggle').checked : true;
 
             // Get all unique dates
             const allDates = new Set();
@@ -575,11 +641,12 @@ ORDER BY actor_login, d
                 row.className = 'chart-row';
 
                 // Check if member is in core team (for "Everyone" mode highlighting)
-                const isEveryone = document.getElementById('everyone-toggle').checked;
+                const isClickHouse = currentOrg === 'ClickHouse';
+                const isEveryone = isClickHouse ? document.getElementById('everyone-toggle').checked : true;
                 const coreTeamList = getTeamMembers();
                 const isCoreTeam = coreTeamList.includes(member);
 
-                if (isEveryone && !isCoreTeam) {
+                if (isEveryone && !isCoreTeam && isClickHouse) {
                     row.classList.add('non-core-member');
                 }
 
@@ -682,7 +749,23 @@ ORDER BY actor_login, d
 
         document.getElementById('everyone-toggle').addEventListener('change', loadData);
 
+        // Organization input - trigger on Enter key or blur
+        const orgInput = document.getElementById('org-input');
+        orgInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                currentOrg = orgInput.value.trim() || 'ClickHouse';
+                updateToggleVisibility();
+                loadData();
+            }
+        });
+        orgInput.addEventListener('blur', () => {
+            currentOrg = orgInput.value.trim() || 'ClickHouse';
+            updateToggleVisibility();
+            loadData();
+        });
+
         // Initial load
+        updateToggleVisibility();
         loadData();
     </script>
 </body>
