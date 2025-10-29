@@ -367,7 +367,10 @@ SELECT
     actor_login,
     ${dateGrouping} AS d,
     uniqIf(number, event_type = 'PullRequestEvent' AND action = 'opened') AS opened_prs,
-    uniqIf(number, event_type = 'PullRequestEvent' AND action = 'closed') AS reviewed_prs,
+    uniqIf(number,
+        event_type IN ('PullRequestEvent', 'PullRequestReviewEvent')
+        AND ((event_type = 'PullRequestEvent' AND actor_login = assignee AND action = 'closed')
+            OR (event_type = 'PullRequestReviewEvent' AND review_state = 'approved'))) AS reviewed_prs,
     uniqIf(number, event_type = 'IssuesEvent' AND action = 'closed') AS closed_issues,
     uniqIf(number, event_type = 'IssueCommentEvent' AND action = 'created') AS comments
 FROM github_events
