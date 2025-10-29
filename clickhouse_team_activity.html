@@ -164,6 +164,19 @@
             font-weight: 500;
         }
 
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .time-range-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+
         .toggle-switch {
             position: relative;
             display: inline-block;
@@ -227,18 +240,29 @@
         </header>
 
         <div class="controls">
-            <button class="btn active" data-metric="comments">Comments</button>
-            <button class="btn" data-metric="closed_issues">Closed Issues</button>
-            <button class="btn" data-metric="reviewed_prs">Reviewed PRs</button>
-            <button class="btn" data-metric="opened_prs">Opened PRs</button>
-            <div class="toggle-container">
-                <span>With Alexey</span>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="alexey-toggle">
-                    <span class="toggle-slider"></span>
-                </label>
+            <div class="controls-row">
+                <button class="btn active" data-metric="comments">Comments</button>
+                <button class="btn" data-metric="closed_issues">Closed Issues</button>
+                <button class="btn" data-metric="reviewed_prs">Reviewed PRs</button>
+                <button class="btn" data-metric="opened_prs">Opened PRs</button>
             </div>
-            <button class="btn" id="refresh-btn" style="margin-left: auto;">Refresh Data</button>
+            <div class="controls-row">
+                <span class="time-range-label">Time Range:</span>
+                <button class="btn" data-range="3">Last 3 months</button>
+                <button class="btn" data-range="6">Last 6 months</button>
+                <button class="btn active" data-range="12">Last year</button>
+                <button class="btn" data-range="all">All time</button>
+            </div>
+            <div class="controls-row">
+                <div class="toggle-container">
+                    <span>With Alexey</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="alexey-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <button class="btn" id="refresh-btn" style="margin-left: auto;">Refresh Data</button>
+            </div>
         </div>
 
         <div id="error-container"></div>
@@ -276,6 +300,7 @@
         }
 
         let currentMetric = 'comments';
+        let currentTimeRange = '12'; // months, or 'all'
         let allData = null;
 
         const METRIC_LABELS = {
@@ -285,8 +310,17 @@
             'comments': 'Comments'
         };
 
+        function getDateFilter() {
+            if (currentTimeRange === 'all') {
+                return '';
+            }
+            const months = parseInt(currentTimeRange);
+            return `AND created_at >= now() - INTERVAL ${months} MONTH`;
+        }
+
         async function fetchData() {
             const teamMembers = getTeamMembers();
+            const dateFilter = getDateFilter();
             const query = `
 WITH repo_name LIKE 'ClickHouse/%' AS repos_condition
 SELECT
@@ -299,6 +333,7 @@ SELECT
 FROM github_events
 WHERE repos_condition
     AND actor_login IN (${teamMembers.map(m => `'${m}'`).join(', ')})
+    ${dateFilter}
 GROUP BY actor_login, d
 ORDER BY actor_login, d
 `.trim();
@@ -488,6 +523,15 @@ ORDER BY actor_login, d
                 e.target.classList.add('active');
                 currentMetric = e.target.dataset.metric;
                 renderCharts(currentMetric);
+            });
+        });
+
+        document.querySelectorAll('.btn[data-range]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.btn[data-range]').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentTimeRange = e.target.dataset.range;
+                loadData();
             });
         });
 
