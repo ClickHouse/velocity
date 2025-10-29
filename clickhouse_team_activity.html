@@ -152,6 +152,63 @@
             border: 1px solid #ddd;
         }
 
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #f8f8f8;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #2171b5;
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -174,6 +231,13 @@
             <button class="btn" data-metric="reviewed_prs">Reviewed PRs</button>
             <button class="btn" data-metric="closed_issues">Closed Issues</button>
             <button class="btn" data-metric="comments">Comments</button>
+            <div class="toggle-container">
+                <span>With Alexey</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="alexey-toggle">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
             <button class="btn" id="refresh-btn" style="margin-left: auto;">Refresh Data</button>
         </div>
 
@@ -194,7 +258,7 @@
     </div>
 
     <script>
-        const TEAM_MEMBERS = [
+        const CORE_TEAM_MEMBERS = [
             'KochetovNicolai', 'nikitamikhaylov', 'alesapin', 'rschu1ze', 'tavplubix',
             'antaljanosbenjamin', 'yariks5s', 'vdimir', 'Avogar', 'nihalzp', 'devcrafter',
             'novikd', 'yakov-olkhovskiy', 'antonio2368', 'vitlibar', 'pufit', 'fm4v',
@@ -205,6 +269,11 @@
             'tuanpach', 'bharatnc', 'Felixoid', 'tiandiwonder', 'thevar1able',
             'shankar-iyer', 'nickitat', 'rienath', 'Ergus', 'ahmadov', 'george-larionov'
         ];
+
+        function getTeamMembers() {
+            const includeAlexey = document.getElementById('alexey-toggle').checked;
+            return includeAlexey ? ['alexey-milovidov', ...CORE_TEAM_MEMBERS] : CORE_TEAM_MEMBERS;
+        }
 
         let currentMetric = 'opened_prs';
         let allData = null;
@@ -217,6 +286,7 @@
         };
 
         async function fetchData() {
+            const teamMembers = getTeamMembers();
             const query = `
 WITH repo_name LIKE 'ClickHouse/%' AS repos_condition
 SELECT
@@ -228,7 +298,7 @@ SELECT
     uniqIf(number, event_type = 'IssueCommentEvent' AND action = 'created') AS comments
 FROM github_events
 WHERE repos_condition
-    AND actor_login IN (${TEAM_MEMBERS.map(m => `'${m}'`).join(', ')})
+    AND actor_login IN (${teamMembers.map(m => `'${m}'`).join(', ')})
 GROUP BY actor_login, d
 ORDER BY actor_login, d
 `.trim();
@@ -251,6 +321,7 @@ ORDER BY actor_login, d
 
         function processData(data) {
             const processed = {};
+            const teamMembers = getTeamMembers();
 
             // Get all unique dates
             const allDates = new Set();
@@ -259,7 +330,7 @@ ORDER BY actor_login, d
             });
             const sortedDates = Array.from(allDates).sort();
 
-            TEAM_MEMBERS.forEach(member => {
+            teamMembers.forEach(member => {
                 const memberMap = {};
                 data.filter(row => row.actor_login === member).forEach(row => {
                     memberMap[row.d] = row;
@@ -421,6 +492,8 @@ ORDER BY actor_login, d
         });
 
         document.getElementById('refresh-btn').addEventListener('click', loadData);
+
+        document.getElementById('alexey-toggle').addEventListener('change', loadData);
 
         // Initial load
         loadData();
