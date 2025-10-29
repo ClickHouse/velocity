@@ -13,8 +13,8 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #0f0f0f;
-            color: #e0e0e0;
+            background: #ffffff;
+            color: #333333;
             padding: 20px;
             line-height: 1.6;
         }
@@ -31,7 +31,7 @@
         h1 {
             font-size: 2em;
             margin-bottom: 10px;
-            color: #fff;
+            color: #000;
         }
 
         .controls {
@@ -43,10 +43,10 @@
 
         .btn {
             padding: 10px 20px;
-            border: none;
+            border: 1px solid #ddd;
             border-radius: 6px;
-            background: #2a2a2a;
-            color: #e0e0e0;
+            background: #f8f8f8;
+            color: #333;
             cursor: pointer;
             font-size: 14px;
             transition: all 0.3s ease;
@@ -54,24 +54,27 @@
         }
 
         .btn:hover {
-            background: #3a3a3a;
+            background: #e8e8e8;
+            border-color: #ccc;
         }
 
         .btn.active {
             background: #ff6b00;
             color: #fff;
+            border-color: #ff6b00;
         }
 
         .loading {
             text-align: center;
             padding: 40px;
             font-size: 1.2em;
-            color: #888;
+            color: #666;
         }
 
         .error {
-            background: #4a0000;
+            background: #fff0f0;
             border: 1px solid #ff0000;
+            color: #cc0000;
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
@@ -87,20 +90,21 @@
             display: flex;
             align-items: center;
             padding: 8px 12px;
-            background: #1a1a1a;
+            background: #fafafa;
             border-radius: 4px;
             transition: background 0.2s ease;
+            border: 1px solid #f0f0f0;
         }
 
         .chart-row:hover {
-            background: #252525;
+            background: #f5f5f5;
         }
 
         .author-name {
             width: 180px;
             font-size: 14px;
             font-weight: 500;
-            color: #fff;
+            color: #000;
             flex-shrink: 0;
         }
 
@@ -108,7 +112,7 @@
             width: 80px;
             text-align: right;
             font-size: 14px;
-            color: #888;
+            color: #666;
             margin-right: 20px;
             flex-shrink: 0;
         }
@@ -129,10 +133,11 @@
             gap: 20px;
             margin-top: 20px;
             padding: 15px;
-            background: #1a1a1a;
+            background: #f8f8f8;
             border-radius: 4px;
             font-size: 12px;
-            color: #888;
+            color: #666;
+            border: 1px solid #e8e8e8;
         }
 
         @keyframes pulse {
@@ -252,7 +257,7 @@ ORDER BY actor_login, d
             return processed;
         }
 
-        function drawSparkline(canvas, data) {
+        function drawSparkline(canvas, data, globalMax) {
             if (!data || data.length === 0) return;
 
             const ctx = canvas.getContext('2d');
@@ -261,7 +266,7 @@ ORDER BY actor_login, d
 
             ctx.clearRect(0, 0, width, height);
 
-            const max = Math.max(...data, 1);
+            const max = globalMax || 1;
             const min = 0;
             const range = max - min;
 
@@ -269,30 +274,7 @@ ORDER BY actor_login, d
 
             const stepX = width / Math.max(data.length - 1, 1);
 
-            // Draw gradient fill
-            const gradient = ctx.createLinearGradient(0, 0, 0, height);
-            gradient.addColorStop(0, 'rgba(255, 107, 0, 0.5)');
-            gradient.addColorStop(1, 'rgba(255, 107, 0, 0.1)');
-
-            ctx.beginPath();
-            ctx.moveTo(0, height);
-
-            data.forEach((value, index) => {
-                const x = index * stepX;
-                const y = height - ((value - min) / range) * height;
-                if (index === 0) {
-                    ctx.lineTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            });
-
-            ctx.lineTo(width, height);
-            ctx.closePath();
-            ctx.fillStyle = gradient;
-            ctx.fill();
-
-            // Draw line
+            // Draw line only (no gradient fill)
             ctx.beginPath();
             data.forEach((value, index) => {
                 const x = index * stepX;
@@ -304,7 +286,7 @@ ORDER BY actor_login, d
                 }
             });
             ctx.strokeStyle = '#ff6b00';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1;
             ctx.stroke();
         }
 
@@ -317,6 +299,16 @@ ORDER BY actor_login, d
             container.innerHTML = '';
 
             if (!allData) return;
+
+            // Calculate global maximum across all members for this metric
+            let globalMax = 0;
+            Object.keys(allData).forEach(member => {
+                const memberData = allData[member];
+                const localMax = Math.max(...memberData[metric], 0);
+                if (localMax > globalMax) {
+                    globalMax = localMax;
+                }
+            });
 
             // Sort members by total activity for the current metric
             const sortedMembers = Object.keys(allData).sort((a, b) => {
@@ -352,8 +344,8 @@ ORDER BY actor_login, d
                 row.appendChild(canvas);
                 container.appendChild(row);
 
-                // Draw chart after DOM insertion
-                setTimeout(() => drawSparkline(canvas, memberData[metric]), 0);
+                // Draw chart after DOM insertion with global scale
+                setTimeout(() => drawSparkline(canvas, memberData[metric], globalMax), 0);
             });
         }
 
