@@ -101,7 +101,7 @@
         }
 
         .author-name {
-            width: 180px;
+            width: 200px;
             font-size: 13px;
             font-weight: 500;
             color: #000;
@@ -494,6 +494,7 @@ ORDER BY actor_login, d
                 sumTotal += total;
             });
 
+            let orderNumber = 1;
             sortedMembers.forEach(member => {
                 const memberData = allData[member];
                 const total = getTotalActivity(memberData, metric);
@@ -505,7 +506,8 @@ ORDER BY actor_login, d
 
                 const nameDiv = document.createElement('div');
                 nameDiv.className = 'author-name';
-                nameDiv.textContent = member;
+                nameDiv.textContent = `${orderNumber}. ${member}`;
+                orderNumber++;
 
                 // Calculate percentage relative to sum, bar width relative to max
                 const percentage = sumTotal > 0 ? (total / sumTotal * 100).toFixed(1) : 0;
