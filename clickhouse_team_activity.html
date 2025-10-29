@@ -389,6 +389,11 @@ FROM github_events
 WHERE repos_condition
     ${actorFilter}
     ${dateFilter}
+    AND actor_login NOT LIKE 'robot-%' AND actor_login NOT LIKE '%[bot]' AND actor_login NOT IN ('CLAassistant')
+    AND ((event_type = 'PullRequestEvent' AND action = 'opened') OR (event_type IN ('PullRequestEvent', 'PullRequestReviewEvent')
+        AND ((event_type = 'PullRequestEvent' AND actor_login = assignee AND action = 'closed')
+            OR (event_type = 'PullRequestReviewEvent' AND review_state = 'approved')))
+        OR (event_type = 'IssuesEvent' AND action = 'closed') OR (event_type = 'IssueCommentEvent' AND action = 'created'))
 GROUP BY actor_login, d
 ORDER BY actor_login, d
 `.trim();
