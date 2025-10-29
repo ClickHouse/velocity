@@ -297,7 +297,7 @@
         <div id="loading" class="loading">Loading data from ClickHouse Playground...</div>
         <div id="chart-container" class="chart-container" style="display: none;"></div>
         <div class="legend">
-            <span>Horizon charts show activity over time (monthly aggregation) - color bands represent different activity levels</span>
+            <span id="legend-text">Horizon charts show activity over time - color bands represent different activity levels</span>
             <div class="legend-scale">
                 <span>Low</span>
                 <div class="legend-band" style="background: #c6dbef;"></div>
@@ -346,14 +346,26 @@
             return `AND created_at >= now() - INTERVAL ${months} MONTH`;
         }
 
+        function getDateGrouping() {
+            // 3 months: by days, 6 months: by weeks, 12 months: by weeks, all time: by months
+            if (currentTimeRange === '3') {
+                return 'toStartOfDay(created_at)';
+            } else if (currentTimeRange === '6' || currentTimeRange === '12') {
+                return 'toStartOfWeek(created_at)';
+            } else {
+                return 'toStartOfMonth(created_at)';
+            }
+        }
+
         async function fetchData() {
             const teamMembers = getTeamMembers();
             const dateFilter = getDateFilter();
+            const dateGrouping = getDateGrouping();
             const query = `
 WITH repo_name LIKE 'ClickHouse/%' AS repos_condition
 SELECT
     actor_login,
-    toStartOfMonth(created_at) AS d,
+    ${dateGrouping} AS d,
     uniqIf(number, event_type = 'PullRequestEvent' AND action = 'opened') AS opened_prs,
     uniqIf(number, event_type = 'PullRequestEvent' AND action = 'closed') AS reviewed_prs,
     uniqIf(number, event_type = 'IssuesEvent' AND action = 'closed') AS closed_issues,
@@ -465,6 +477,13 @@ ORDER BY actor_login, d
             container.innerHTML = '';
 
             if (!allData) return;
+
+            // Update legend text based on time range
+            const granularityText = currentTimeRange === '3' ? 'daily aggregation' :
+                                   (currentTimeRange === '6' || currentTimeRange === '12') ? 'weekly aggregation' :
+                                   'monthly aggregation';
+            document.getElementById('legend-text').textContent =
+                `Horizon charts show activity over time (${granularityText}) - color bands represent different activity levels`;
 
             // Calculate global maximum across all members for this metric
             let globalMax = 0;
