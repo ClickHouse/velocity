@@ -454,6 +454,74 @@
             }
         }
 
+        function generateUserActivityQuery(actorLogin, metric) {
+            const dateFilter = getDateFilter();
+            const orgs = currentOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
+
+            // Build repo condition
+            const repoConditions = orgs.map(org => {
+                const isFullRepo = org.includes('/');
+                return isFullRepo
+                    ? `repo_name = '${org}'`
+                    : `repo_name LIKE '${org}/%'`;
+            });
+            const repoCondition = repoConditions.length > 1
+                ? `(${repoConditions.join(' OR ')})`
+                : repoConditions[0];
+
+            // Build WHERE condition based on metric
+            let metricCondition = '';
+            let selectColumns = `
+    created_at,
+    repo_name,
+    number,
+    event_type,
+    action,
+    'https://github.com/' || repo_name || '/' || if(event_type = 'IssuesEvent', 'issues', 'pull') || '/' || toString(number) AS url`;
+
+            switch(metric) {
+                case 'opened_prs':
+                    metricCondition = "event_type = 'PullRequestEvent' AND action = 'opened'";
+                    break;
+                case 'reviewed_prs':
+                    metricCondition = `event_type IN ('PullRequestEvent', 'PullRequestReviewEvent')
+        AND ((event_type = 'PullRequestEvent' AND actor_login = assignee AND action = 'closed')
+            OR (event_type = 'PullRequestReviewEvent' AND review_state = 'approved'))`;
+                    break;
+                case 'closed_issues':
+                    metricCondition = "event_type = 'IssuesEvent' AND action = 'closed'";
+                    break;
+                case 'comments':
+                    metricCondition = "event_type = 'IssueCommentEvent' AND action = 'created'";
+                    break;
+                case 'all_activity':
+                    metricCondition = `(event_type = 'PullRequestEvent' AND action = 'opened')
+        OR (event_type IN ('PullRequestEvent', 'PullRequestReviewEvent')
+            AND ((event_type = 'PullRequestEvent' AND actor_login = assignee AND action = 'closed')
+                OR (event_type = 'PullRequestReviewEvent' AND review_state = 'approved')))
+        OR (event_type = 'IssuesEvent' AND action = 'closed')
+        OR (event_type = 'IssueCommentEvent' AND action = 'created')`;
+                    break;
+            }
+
+            return `
+SELECT ${selectColumns}
+FROM github_events
+WHERE actor_login = '${actorLogin}'
+    AND ${repoCondition}
+    ${dateFilter}
+    AND (${metricCondition})
+ORDER BY created_at DESC
+LIMIT 1000
+`.trim();
+        }
+
+        function generatePlaygroundUrl(actorLogin, metric) {
+            const query = generateUserActivityQuery(actorLogin, metric);
+            const base64Query = btoa(query);
+            return `https://play.clickhouse.com/play?user=play#${base64Query}`;
+        }
+
         async function fetchData() {
             const teamMembers = getTeamMembers();
             const dateFilter = getDateFilter();
@@ -697,7 +765,8 @@ ORDER BY actor_login, d
 
                 const nameDiv = document.createElement('div');
                 nameDiv.className = 'author-name';
-                nameDiv.innerHTML = `${orderNumber}. <a href="https://github.com/${member}" target="_blank" rel="noopener noreferrer">${member}</a>`;
+                const playgroundUrl = generatePlaygroundUrl(member, metric);
+                nameDiv.innerHTML = `${orderNumber}. <a href="${playgroundUrl}" target="_blank" rel="noopener noreferrer">${member}</a>`;
                 orderNumber++;
 
                 // Calculate percentage relative to sum, bar width relative to max
