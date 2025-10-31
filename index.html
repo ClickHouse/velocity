@@ -475,8 +475,7 @@
     created_at,
     repo_name,
     number,
-    event_type,
-    action,
+    title,
     'https://github.com/' || repo_name || '/' || if(event_type = 'IssuesEvent', 'issues', 'pull') || '/' || toString(number) AS url`;
 
             switch(metric) {
@@ -519,7 +518,7 @@ LIMIT 1000
         function generatePlaygroundUrl(actorLogin, metric) {
             const query = generateUserActivityQuery(actorLogin, metric);
             const base64Query = btoa(query);
-            return `https://play.clickhouse.com/play?user=play#${base64Query}`;
+            return `https://play.clickhouse.com/play?user=play&run=1#${base64Query}`;
         }
 
         async function fetchData() {
