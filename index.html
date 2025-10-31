@@ -289,7 +289,7 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 14px;
-            width: 150px;
+            width: 250px;
             font-family: inherit;
         }
 
@@ -333,7 +333,7 @@
             <div class="header-right">
                 <div class="org-selector">
                     <label for="org-input">Organization:</label>
-                    <input type="text" id="org-input" value="ClickHouse" />
+                    <input type="text" id="org-input" value="ClickHouse" placeholder="e.g., apache, google, or apache/doris, google/guava" />
                 </div>
             </div>
         </header>
@@ -412,7 +412,9 @@
         let allData = null;
 
         function updateToggleVisibility() {
-            const isClickHouse = currentOrg === 'ClickHouse' || currentOrg.startsWith('ClickHouse/');
+            // Split by comma and check if any org is ClickHouse
+            const orgs = currentOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
+            const isClickHouse = orgs.some(org => org === 'ClickHouse' || org.startsWith('ClickHouse/'));
             const alexeyToggle = document.getElementById('alexey-toggle').parentElement.parentElement;
             const everyoneToggle = document.getElementById('everyone-toggle').parentElement.parentElement;
 
@@ -457,18 +459,26 @@
             const dateFilter = getDateFilter();
             const dateGrouping = getDateGrouping();
 
-            // Check if input is a full repo (contains '/') or just org name
-            const isFullRepo = currentOrg.includes('/');
-            const isClickHouse = currentOrg === 'ClickHouse' || currentOrg.startsWith('ClickHouse/');
+            // Split by comma and trim each organization
+            const orgs = currentOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
+
+            // Check if any org is ClickHouse for toggle visibility
+            const isClickHouse = orgs.some(org => org === 'ClickHouse' || org.startsWith('ClickHouse/'));
             const isEveryone = isClickHouse ? document.getElementById('everyone-toggle').checked : true;
 
             // Build actor filter - either specific team members or everyone
             const actorFilter = isEveryone ? '' : `AND actor_login IN (${teamMembers.map(m => `'${m}'`).join(', ')})`;
 
-            // Build repo condition - exact match for full repo, LIKE for org
-            const repoCondition = isFullRepo
-                ? `repo_name = '${currentOrg}'`
-                : `repo_name LIKE '${currentOrg}/%'`;
+            // Build repo condition - combine multiple organizations with OR
+            const repoConditions = orgs.map(org => {
+                const isFullRepo = org.includes('/');
+                return isFullRepo
+                    ? `repo_name = '${org}'`
+                    : `repo_name LIKE '${org}/%'`;
+            });
+            const repoCondition = repoConditions.length > 1
+                ? `(${repoConditions.join(' OR ')})`
+                : repoConditions[0];
 
             const query = `
 WITH ${repoCondition} AS repos_condition
@@ -514,7 +524,9 @@ ORDER BY actor_login, d
 
         function processData(data) {
             const processed = {};
-            const isClickHouse = currentOrg === 'ClickHouse' || currentOrg.startsWith('ClickHouse/');
+            // Split by comma and check if any org is ClickHouse
+            const orgs = currentOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
+            const isClickHouse = orgs.some(org => org === 'ClickHouse' || org.startsWith('ClickHouse/'));
             const isEveryone = isClickHouse ? document.getElementById('everyone-toggle').checked : true;
 
             // Get all unique dates
@@ -662,7 +674,8 @@ ORDER BY actor_login, d
                 row.className = 'chart-row';
 
                 // Check if member is in core team (for "Everyone" mode highlighting)
-                const isClickHouse = currentOrg === 'ClickHouse' || currentOrg.startsWith('ClickHouse/');
+                const orgs = currentOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
+                const isClickHouse = orgs.some(org => org === 'ClickHouse' || org.startsWith('ClickHouse/'));
                 const isEveryone = isClickHouse ? document.getElementById('everyone-toggle').checked : true;
                 const coreTeamList = getTeamMembers();
                 const isCoreTeam = coreTeamList.includes(member);
