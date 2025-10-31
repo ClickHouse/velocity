@@ -481,27 +481,38 @@
                 : repoConditions[0];
 
             const query = `
-WITH ${repoCondition} AS repos_condition
+WITH ${repoCondition} AS repos_condition,
+    event_type = 'PullRequestEvent' AND action = 'opened' AS opened_prs_cond,
+    event_type IN ('PullRequestEvent', 'PullRequestReviewEvent')
+        AND ((event_type = 'PullRequestEvent' AND actor_login = assignee AND action = 'closed')
+            OR (event_type = 'PullRequestReviewEvent' AND review_state = 'approved')) AS reviewed_prs_cond,
+    event_type = 'IssuesEvent' AND action = 'closed' AS closed_issues_cond,
+    event_type = 'IssueCommentEvent' AND action = 'created' AS comments_cond
 SELECT
     actor_login,
     ${dateGrouping} AS d,
-    uniqIf(number, event_type = 'PullRequestEvent' AND action = 'opened') AS opened_prs,
-    uniqIf(number,
-        event_type IN ('PullRequestEvent', 'PullRequestReviewEvent')
-        AND ((event_type = 'PullRequestEvent' AND actor_login = assignee AND action = 'closed')
-            OR (event_type = 'PullRequestReviewEvent' AND review_state = 'approved'))) AS reviewed_prs,
-    uniqIf(number, event_type = 'IssuesEvent' AND action = 'closed') AS closed_issues,
-    uniqIf(number, event_type = 'IssueCommentEvent' AND action = 'created') AS comments,
+    uniqIf(number, opened_prs_cond) AS opened_prs,
+    uniqIf(number, reviewed_prs_cond) AS reviewed_prs,
+    uniqIf(number, closed_issues_cond) AS closed_issues,
+    uniqIf(number, comments_cond) AS comments,
     uniq(number) AS all_activity
 FROM github_events
 WHERE repos_condition
     ${actorFilter}
     ${dateFilter}
-    AND actor_login NOT LIKE 'robot-%' AND actor_login NOT LIKE '%-robot' AND actor_login NOT LIKE '%-bot' AND actor_login NOT LIKE '%[bot]' AND actor_login NOT IN ('CLAassistant')
-    AND ((event_type = 'PullRequestEvent' AND action = 'opened') OR (event_type IN ('PullRequestEvent', 'PullRequestReviewEvent')
-        AND ((event_type = 'PullRequestEvent' AND actor_login = assignee AND action = 'closed')
-            OR (event_type = 'PullRequestReviewEvent' AND review_state = 'approved')))
-        OR (event_type = 'IssuesEvent' AND action = 'closed') OR (event_type = 'IssueCommentEvent' AND action = 'created'))
+    AND (opened_prs_cond OR reviewed_prs_cond OR closed_issues_cond OR comments_cond)
+    -- As an optimization, limit the report to top authors:
+    AND actor_login IN
+    (
+        SELECT actor_login
+        FROM github_events
+        WHERE repos_condition ${dateFilter}
+            AND NOT match(actor_login, '(^(ro)?bot-|-(ro)?bot$|\\[bot\\]|(-commenter|-importer|QA|io|Jenkins)$|CLAassistant|googlebot|^Apache)')
+            AND (opened_prs_cond OR reviewed_prs_cond OR closed_issues_cond OR comments_cond)
+        GROUP BY actor_login
+        ORDER BY uniq(number) DESC
+        LIMIT 1000
+    )
 GROUP BY actor_login, d
 ORDER BY actor_login, d
 `.trim();
