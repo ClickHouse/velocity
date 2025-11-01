@@ -855,13 +855,14 @@
         }
 
         function updatePageTitle() {
+            let title;
             if (comparisonMode && comparisonOrg) {
-                document.title = `${currentOrg} vs. ${comparisonOrg}: Comparison Of The Teams Activity`;
-                document.getElementById('page-subtitle').textContent = 'Comparing team activity metrics';
+                title = `${currentOrg} vs. ${comparisonOrg}: Comparison Of The Teams Activity`;
             } else {
-                document.title = `${currentOrg} Team Activity Dashboard`;
-                document.getElementById('page-subtitle').textContent = `Activity metrics for ${currentOrg} team members`;
+                title = `${currentOrg} Team Activity Dashboard`;
             }
+            document.title = title;
+            document.getElementById('page-subtitle').textContent = title;
         }
 
         function loadStateFromHash() {
