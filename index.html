@@ -603,30 +603,22 @@
         }
 
         .theme-switcher {
-            padding: 10px 20px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            background: var(--btn-bg);
-            color: var(--text-primary);
+            background: none;
+            border: none;
             cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            font-weight: 500;
-            display: flex;
+            font-size: 24px;
+            padding: 0;
+            margin: 0;
+            margin-right: 12px;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            display: inline-flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 10px;
+            opacity: 0.7;
         }
 
         .theme-switcher:hover {
-            background: var(--btn-hover-bg);
-            border-color: var(--border-color);
-        }
-
-        .theme-icon {
-            width: 16px;
-            height: 16px;
-            display: inline-block;
+            transform: scale(1.2);
+            opacity: 1;
         }
     </style>
 </head>
@@ -646,11 +638,8 @@
                 <p>Activity metrics for ClickHouse Core team members</p>
             </div>
             <div class="header-right">
-                <button class="theme-switcher" id="theme-switcher">
-                    <span class="theme-icon">☀️</span>
-                    <span class="theme-text">Light</span>
-                </button>
                 <div class="org-selector">
+                    <button class="theme-switcher" id="theme-switcher">☀️</button>
                     <label for="org-input">Organization(s)/Repository(s):</label>
                     <input type="text" id="org-input" value="ClickHouse" placeholder="e.g., apache, google, or apache/spark, google/guava" autocomplete="off" />
                     <div id="org-autocomplete" class="autocomplete-dropdown"></div>
@@ -733,27 +722,22 @@
     <script>
         // Theme switcher functionality
         const themeToggle = document.getElementById('theme-switcher');
-        const themeIcon = themeToggle.querySelector('.theme-icon');
-        const themeText = themeToggle.querySelector('.theme-text');
 
         // Load theme from localStorage or default to light
         const currentTheme = localStorage.getItem('theme') || 'light';
         if (currentTheme === 'dark') {
             document.body.classList.add('dark-theme');
-            themeIcon.textContent = '🌙';
-            themeText.textContent = 'Dark';
+            themeToggle.textContent = '🌙';
         }
 
         themeToggle.addEventListener('click', () => {
             document.body.classList.toggle('dark-theme');
 
             if (document.body.classList.contains('dark-theme')) {
-                themeIcon.textContent = '🌙';
-                themeText.textContent = 'Dark';
+                themeToggle.textContent = '🌙';
                 localStorage.setItem('theme', 'dark');
             } else {
-                themeIcon.textContent = '☀️';
-                themeText.textContent = 'Light';
+                themeToggle.textContent = '☀️';
                 localStorage.setItem('theme', 'light');
             }
         });
