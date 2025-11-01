@@ -452,6 +452,13 @@
             border-radius: 4px;
             text-align: center;
         }
+
+        .org-stats {
+            font-size: 0.85em;
+            font-weight: normal;
+            color: #666;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -877,6 +884,102 @@ ORDER BY actor_login, d
             return result.data;
         }
 
+        async function fetchAggregateStats(orgToFetch = null, metric = 'all_activity') {
+            const teamMembers = getTeamMembers();
+            const dateFilter = getDateFilter();
+
+            // Use provided org or default to currentOrg
+            const targetOrg = orgToFetch || currentOrg;
+
+            // Split by comma and trim each organization
+            const orgs = targetOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
+
+            // Check if any org is ClickHouse for toggle visibility
+            const isClickHouse = orgs.some(org => org === 'ClickHouse' || org.startsWith('ClickHouse/'));
+            // In comparison mode, always use "Everyone" mode
+            const isEveryone = comparisonMode ? true : (isClickHouse ? document.getElementById('everyone-toggle').checked : true);
+
+            // Build actor filter - either specific team members or everyone
+            const actorFilter = isEveryone ? '' : `AND actor_login IN (${teamMembers.map(m => `'${m}'`).join(', ')})`;
+
+            // Build repo condition - combine multiple organizations with OR
+            const repoConditions = orgs.map(org => {
+                const isFullRepo = org.includes('/');
+                return isFullRepo
+                    ? `repo_name = '${org}'`
+                    : `repo_name LIKE '${org}/%'`;
+            });
+            const repoCondition = repoConditions.length > 1
+                ? `(${repoConditions.join(' OR ')})`
+                : repoConditions[0];
+
+            // Determine metric condition
+            let metricCondition;
+            switch (metric) {
+                case 'opened_prs':
+                    metricCondition = "event_type = 'PullRequestEvent' AND action = 'opened'";
+                    break;
+                case 'reviewed_prs':
+                    metricCondition = `event_type IN ('PullRequestEvent', 'PullRequestReviewEvent')
+        AND ((event_type = 'PullRequestEvent' AND actor_login = assignee AND action = 'closed')
+            OR (event_type = 'PullRequestReviewEvent' AND review_state = 'approved'))`;
+                    break;
+                case 'created_issues':
+                    metricCondition = "event_type = 'IssuesEvent' AND action = 'opened'";
+                    break;
+                case 'closed_issues':
+                    metricCondition = "event_type = 'IssuesEvent' AND action = 'closed'";
+                    break;
+                case 'comments':
+                    metricCondition = "event_type = 'IssueCommentEvent' AND action = 'created'";
+                    break;
+                case 'all_activity':
+                    metricCondition = `(event_type = 'PullRequestEvent' AND action = 'opened')
+        OR (event_type IN ('PullRequestEvent', 'PullRequestReviewEvent')
+            AND ((event_type = 'PullRequestEvent' AND actor_login = assignee AND action = 'closed')
+                OR (event_type = 'PullRequestReviewEvent' AND review_state = 'approved')))
+        OR (event_type = 'IssuesEvent' AND action = 'opened')
+        OR (event_type = 'IssuesEvent' AND action = 'closed')
+        OR (event_type = 'IssueCommentEvent' AND action = 'created')`;
+                    break;
+            }
+
+            // Build deleted logins filter
+            const deletedLoginsArray = Array.from(deletedLogins);
+            const deletedLoginsFilter = deletedLoginsArray.length > 0
+                ? `AND actor_login NOT IN (${deletedLoginsArray.map(l => `'${l}'`).join(', ')})`
+                : '';
+
+            const query = `
+SELECT
+    uniq(number) AS unique_items,
+    uniq(actor_login) AS unique_logins,
+    count() AS total_events
+FROM github_events
+WHERE ${repoCondition}
+    ${actorFilter}
+    ${dateFilter}
+    ${deletedLoginsFilter}
+    AND NOT match(actor_login, '(^(ro)?bot-|-(ro)?bot$|\\[bot\\]|(-commenter|-importer|QA|io|Jenkins)$|CLAassistant|googlebot|^Apache)')
+    AND (${metricCondition})
+`.trim();
+
+            const response = await fetch('https://play.clickhouse.com/?user=play', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain',
+                },
+                body: query + ' FORMAT JSON'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            return result.data[0] || { unique_items: 0, unique_logins: 0, total_events: 0 };
+        }
+
         function processData(data, providedDates = null) {
             const processed = {};
             // Split by comma and check if any org is ClickHouse
@@ -1222,7 +1325,7 @@ ORDER BY actor_login, d
             });
         }
 
-        function renderCharts(metric) {
+        async function renderCharts(metric) {
             // Update legend text based on grouping
             let granularityText;
             if (currentGrouping === 'auto') {
@@ -1244,15 +1347,27 @@ ORDER BY actor_login, d
             const wrapper = document.getElementById('charts-wrapper');
 
             if (comparisonMode && comparisonOrg && allDataComparison) {
+                // Fetch stats for both orgs in parallel
+                const [stats1, stats2] = await Promise.all([
+                    fetchAggregateStats(currentOrg, metric),
+                    fetchAggregateStats(comparisonOrg, metric)
+                ]);
+
                 // Comparison mode: two columns
                 wrapper.innerHTML = `
                     <div class="comparison-wrapper">
                         <div class="comparison-column">
-                            <div class="comparison-column-title">${currentOrg}</div>
+                            <div class="comparison-column-title">
+                                ${currentOrg}
+                                <div class="org-stats">${stats1.unique_items.toLocaleString()} items · ${stats1.unique_logins.toLocaleString()} logins · ${stats1.total_events.toLocaleString()} events</div>
+                            </div>
                             <div id="chart-container-1" class="chart-container"></div>
                         </div>
                         <div class="comparison-column">
-                            <div class="comparison-column-title">${comparisonOrg}</div>
+                            <div class="comparison-column-title">
+                                ${comparisonOrg}
+                                <div class="org-stats">${stats2.unique_items.toLocaleString()} items · ${stats2.unique_logins.toLocaleString()} logins · ${stats2.total_events.toLocaleString()} events</div>
+                            </div>
                             <div id="chart-container-2" class="chart-container"></div>
                         </div>
                     </div>
@@ -1300,8 +1415,19 @@ ORDER BY actor_login, d
                 renderSingleChart(container1, allData, metric, currentOrg, unifiedMaxTotal);
                 renderSingleChart(container2, allDataComparison, metric, comparisonOrg, unifiedMaxTotal);
             } else {
-                // Normal mode: single column
-                wrapper.innerHTML = '<div id="chart-container" class="chart-container"></div>';
+                // Fetch stats for the org
+                const stats = await fetchAggregateStats(currentOrg, metric);
+
+                // Normal mode: single column with header
+                wrapper.innerHTML = `
+                    <div class="comparison-column">
+                        <div class="comparison-column-title">
+                            ${currentOrg}
+                            <div class="org-stats">${stats.unique_items.toLocaleString()} items · ${stats.unique_logins.toLocaleString()} logins · ${stats.total_events.toLocaleString()} events</div>
+                        </div>
+                        <div id="chart-container" class="chart-container"></div>
+                    </div>
+                `;
                 const container = document.getElementById('chart-container');
                 container.style.display = 'flex';
                 renderSingleChart(container, allData, metric, currentOrg);
