@@ -340,12 +340,12 @@
 
         <div class="controls">
             <div class="controls-row">
-                <button class="btn active" data-metric="comments">Comments</button>
+                <button class="btn active" data-metric="all_activity">All activity</button>
+                <button class="btn" data-metric="comments">Comments</button>
                 <button class="btn" data-metric="created_issues">Created Issues</button>
                 <button class="btn" data-metric="closed_issues">Closed Issues</button>
-                <button class="btn" data-metric="reviewed_prs">Reviewed PRs</button>
                 <button class="btn" data-metric="opened_prs">Opened PRs</button>
-                <button class="btn" data-metric="all_activity">All activity</button>
+                <button class="btn" data-metric="reviewed_prs">Reviewed PRs</button>
             </div>
             <div class="controls-row">
                 <span class="time-range-label">Time Range:</span>
@@ -406,7 +406,7 @@
             return includeAlexey ? ['alexey-milovidov', ...CORE_TEAM_MEMBERS] : CORE_TEAM_MEMBERS;
         }
 
-        let currentMetric = 'comments';
+        let currentMetric = 'all_activity';
         let currentTimeRange = 'all'; // months, or 'all'
         let currentOrg = 'ClickHouse';
         let allData = null;
