@@ -282,6 +282,12 @@
             border: 1px solid #ddd;
         }
 
+        .comparison-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         .toggle-container {
             display: flex;
             align-items: center;
@@ -292,6 +298,10 @@
             background: #f8f8f8;
             font-size: 14px;
             font-weight: 500;
+        }
+
+        .comparison-org-selector {
+            flex: 1;
         }
 
         .controls-row {
@@ -366,6 +376,16 @@
         .org-selector label {
             font-weight: 500;
             color: #666;
+            white-space: nowrap;
+        }
+
+        .org-selector:not(.comparison-org-selector) label {
+            display: inline-block;
+            min-width: 235px;
+        }
+
+        .comparison-org-selector label {
+            min-width: auto;
         }
 
         .org-selector input {
@@ -440,16 +460,18 @@
                     <label for="org-input">Organization(s)/Repository(s):</label>
                     <input type="text" id="org-input" value="ClickHouse" placeholder="e.g., apache, google, or apache/doris, google/guava" />
                 </div>
-                <div class="toggle-container" style="margin-top: 10px;">
-                    <span>Compare</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="comparison-toggle">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div class="org-selector" id="comparison-org-selector" style="margin-top: 10px; display: none;">
-                    <label for="comparison-org-input">Compare with:</label>
-                    <input type="text" id="comparison-org-input" value="" placeholder="e.g., apache, google, or apache/doris, google/guava" />
+                <div class="comparison-row" style="margin-top: 10px;">
+                    <div class="toggle-container">
+                        <span>Compare</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="comparison-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="org-selector comparison-org-selector" id="comparison-org-selector" style="display: none;">
+                        <label for="comparison-org-input">with</label>
+                        <input type="text" id="comparison-org-input" value="" placeholder="e.g., apache, google, or apache/doris, google/guava" />
+                    </div>
                 </div>
             </div>
         </header>
