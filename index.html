@@ -1657,13 +1657,18 @@ WHERE ${repoCondition}
         let autocompleteTimeout = null;
 
         async function fetchAutocompleteSuggestions(query) {
-            if (!query || query.length < 2) return [];
+            if (!query || query.length < 3) return [];
+
+            // Use prefix search for short queries (3-4 chars), substring for longer
+            const pattern = query.length < 5
+                ? `${query.toLowerCase()}%`
+                : `%${query.toLowerCase()}%`;
 
             const searchQuery = `
 SELECT repo_name
 FROM github_events
 WHERE event_type = 'WatchEvent'
-    AND repo_name ILIKE '%${query.toLowerCase()}%'
+    AND repo_name ILIKE '${pattern}'
 GROUP BY repo_name
 ORDER BY count() DESC
 LIMIT 10
@@ -1742,7 +1747,7 @@ LIMIT 10
 
                 const { segment } = getCurrentInputSegment(input);
 
-                if (segment.length < 2) {
+                if (segment.length < 3) {
                     dropdown.classList.remove('active');
                     return;
                 }
