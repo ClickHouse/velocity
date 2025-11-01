@@ -77,6 +77,10 @@
             color: var(--text-heading);
         }
 
+        body.no-transition * {
+            transition: none !important;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -771,6 +775,9 @@
         }
 
         themeToggle.addEventListener('click', () => {
+            // Disable transitions temporarily
+            document.body.classList.add('no-transition');
+
             document.body.classList.toggle('dark-theme');
 
             if (document.body.classList.contains('dark-theme')) {
@@ -785,6 +792,11 @@
             if (allData) {
                 renderCharts(currentMetric);
             }
+
+            // Re-enable transitions after a brief moment
+            setTimeout(() => {
+                document.body.classList.remove('no-transition');
+            }, 50);
         });
 
         const CORE_TEAM_MEMBERS = [
