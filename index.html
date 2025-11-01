@@ -441,6 +441,10 @@
             background: #f5f5f5;
         }
 
+        .autocomplete-item.selected {
+            background: #e6f2ff;
+        }
+
         .autocomplete-item.org {
             font-weight: 600;
             color: #2171b5;
@@ -1767,9 +1771,46 @@ LIMIT 10
         function setupAutocomplete(inputId, dropdownId) {
             const input = document.getElementById(inputId);
             const dropdown = document.getElementById(dropdownId);
+            let selectedIndex = -1;
+
+            function selectItem(item) {
+                const { beforeSegment, afterSegment } = getCurrentInputSegment(input);
+                const prefix = beforeSegment ? beforeSegment + ' ' : '';
+                const suffix = afterSegment ? afterSegment : '';
+                input.value = prefix + item.value + suffix;
+                dropdown.classList.remove('active');
+                selectedIndex = -1;
+
+                // Load data immediately based on which input was used
+                if (inputId === 'org-input') {
+                    currentOrg = input.value.trim() || 'ClickHouse';
+                    updateToggleVisibility();
+                    updateUrlHash();
+                    loadData();
+                } else if (inputId === 'comparison-org-input') {
+                    comparisonOrg = input.value.trim();
+                    updateUrlHash();
+                    loadData();
+                }
+
+                input.focus();
+            }
+
+            function updateSelection() {
+                const items = dropdown.querySelectorAll('.autocomplete-item');
+                items.forEach((item, index) => {
+                    if (index === selectedIndex) {
+                        item.classList.add('selected');
+                        item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    } else {
+                        item.classList.remove('selected');
+                    }
+                });
+            }
 
             input.addEventListener('input', () => {
                 clearTimeout(autocompleteTimeout);
+                selectedIndex = -1;
 
                 const { segment } = getCurrentInputSegment(input);
 
@@ -1792,38 +1833,53 @@ LIMIT 10
                         const div = document.createElement('div');
                         div.className = `autocomplete-item ${item.type}`;
                         div.textContent = item.value;
+                        div.dataset.value = item.value;
+                        div.dataset.type = item.type;
                         div.addEventListener('click', () => {
-                            const { beforeSegment, afterSegment } = getCurrentInputSegment(input);
-                            const prefix = beforeSegment ? beforeSegment + ' ' : '';
-                            const suffix = afterSegment ? afterSegment : '';
-                            input.value = prefix + item.value + suffix;
-                            dropdown.classList.remove('active');
-
-                            // Load data immediately based on which input was used
-                            if (inputId === 'org-input') {
-                                currentOrg = input.value.trim() || 'ClickHouse';
-                                updateToggleVisibility();
-                                updateUrlHash();
-                                loadData();
-                            } else if (inputId === 'comparison-org-input') {
-                                comparisonOrg = input.value.trim();
-                                updateUrlHash();
-                                loadData();
-                            }
-
-                            input.focus();
+                            selectItem(item);
                         });
                         dropdown.appendChild(div);
                     });
 
                     dropdown.classList.add('active');
+                    selectedIndex = -1;
                 }, 300);
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (!dropdown.classList.contains('active')) return;
+
+                const items = dropdown.querySelectorAll('.autocomplete-item');
+                if (items.length === 0) return;
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIndex = (selectedIndex + 1) % items.length;
+                    updateSelection();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIndex = selectedIndex <= 0 ? items.length - 1 : selectedIndex - 1;
+                    updateSelection();
+                } else if (e.key === 'Enter') {
+                    if (selectedIndex >= 0 && selectedIndex < items.length) {
+                        e.preventDefault();
+                        const selectedItem = items[selectedIndex];
+                        selectItem({
+                            type: selectedItem.dataset.type,
+                            value: selectedItem.dataset.value
+                        });
+                    }
+                } else if (e.key === 'Escape') {
+                    dropdown.classList.remove('active');
+                    selectedIndex = -1;
+                }
             });
 
             input.addEventListener('blur', () => {
                 // Delay to allow click on dropdown
                 setTimeout(() => {
                     dropdown.classList.remove('active');
+                    selectedIndex = -1;
                 }, 200);
             });
 
