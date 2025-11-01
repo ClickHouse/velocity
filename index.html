@@ -345,6 +345,27 @@
         .header-right {
             flex-shrink: 0;
         }
+
+        .comparison-wrapper {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .comparison-column {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .comparison-column-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -358,6 +379,17 @@
                 <div class="org-selector">
                     <label for="org-input">Organization(s)/Repository(s):</label>
                     <input type="text" id="org-input" value="ClickHouse" placeholder="e.g., apache, google, or apache/doris, google/guava" />
+                </div>
+                <div class="toggle-container" style="margin-top: 10px;">
+                    <span>Compare</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="comparison-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="org-selector" id="comparison-org-selector" style="margin-top: 10px; display: none;">
+                    <label for="comparison-org-input">Compare with:</label>
+                    <input type="text" id="comparison-org-input" value="" placeholder="e.g., apache, google, or apache/doris, google/guava" />
                 </div>
             </div>
         </header>
@@ -406,7 +438,9 @@
 
         <div id="error-container"></div>
         <div id="loading" class="loading">Loading data from ClickHouse Playground...</div>
-        <div id="chart-container" class="chart-container" style="display: none;"></div>
+        <div id="charts-wrapper">
+            <div id="chart-container" class="chart-container" style="display: none;"></div>
+        </div>
         <div class="legend">
             <span id="legend-text">Horizon charts show activity over time - color bands represent different activity levels</span>
             <div class="legend-scale">
@@ -442,7 +476,10 @@
         let currentTimeRange = 'all'; // months, or 'all'
         let currentGrouping = 'auto'; // auto, quarter, month, week, day
         let currentOrg = 'ClickHouse';
+        let comparisonMode = false;
+        let comparisonOrg = '';
         let allData = null;
+        let allDataComparison = null;
         let deletedLogins = new Set();
 
         function serializeStateToHash() {
@@ -453,6 +490,12 @@
             params.set('grouping', currentGrouping);
             params.set('alexey', document.getElementById('alexey-toggle').checked ? '1' : '0');
             params.set('everyone', document.getElementById('everyone-toggle').checked ? '1' : '0');
+            if (comparisonMode) {
+                params.set('compare', '1');
+                if (comparisonOrg) {
+                    params.set('compareOrg', comparisonOrg);
+                }
+            }
             if (deletedLogins.size > 0) {
                 params.set('deleted', Array.from(deletedLogins).join(','));
             }
@@ -501,6 +544,18 @@
 
             if (params.has('everyone')) {
                 document.getElementById('everyone-toggle').checked = params.get('everyone') === '1';
+                stateChanged = true;
+            }
+
+            if (params.has('compare')) {
+                comparisonMode = params.get('compare') === '1';
+                document.getElementById('comparison-toggle').checked = comparisonMode;
+                stateChanged = true;
+            }
+
+            if (params.has('compareOrg')) {
+                comparisonOrg = params.get('compareOrg');
+                document.getElementById('comparison-org-input').value = comparisonOrg;
                 stateChanged = true;
             }
 
@@ -639,13 +694,16 @@ LIMIT 1000
             return `https://play.clickhouse.com/play?user=play&run=1#${base64Query}`;
         }
 
-        async function fetchData() {
+        async function fetchData(orgToFetch = null) {
             const teamMembers = getTeamMembers();
             const dateFilter = getDateFilter();
             const dateGrouping = getDateGrouping();
 
+            // Use provided org or default to currentOrg
+            const targetOrg = orgToFetch || currentOrg;
+
             // Split by comma and trim each organization
-            const orgs = currentOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
+            const orgs = targetOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
 
             // Check if any org is ClickHouse for toggle visibility
             const isClickHouse = orgs.some(org => org === 'ClickHouse' || org.startsWith('ClickHouse/'));
@@ -873,35 +931,16 @@ ORDER BY actor_login, d
             return memberData[metric].reduce((sum, val) => sum + val, 0);
         }
 
-        function renderCharts(metric) {
-            const container = document.getElementById('chart-container');
+        function renderSingleChart(container, data, metric, orgName) {
             container.innerHTML = '';
 
-            if (!allData) return;
-
-            // Update legend text based on grouping
-            let granularityText;
-            if (currentGrouping === 'auto') {
-                granularityText = currentTimeRange === '3' ? 'daily aggregation' :
-                                 (currentTimeRange === '6' || currentTimeRange === '12') ? 'weekly aggregation' :
-                                 'monthly aggregation';
-            } else if (currentGrouping === 'quarter') {
-                granularityText = 'quarterly aggregation';
-            } else if (currentGrouping === 'month') {
-                granularityText = 'monthly aggregation';
-            } else if (currentGrouping === 'week') {
-                granularityText = 'weekly aggregation';
-            } else if (currentGrouping === 'day') {
-                granularityText = 'daily aggregation';
-            }
-            document.getElementById('legend-text').textContent =
-                `Horizon charts show activity over time (${granularityText}) - color bands represent different activity levels`;
+            if (!data) return;
 
             // Calculate global maximum across all members for this metric (excluding deleted logins)
             let globalMax = 0;
-            Object.keys(allData).forEach(member => {
+            Object.keys(data).forEach(member => {
                 if (deletedLogins.has(member)) return;
-                const memberData = allData[member];
+                const memberData = data[member];
                 const localMax = Math.max(...memberData[metric], 0);
                 if (localMax > globalMax) {
                     globalMax = localMax;
@@ -911,11 +950,11 @@ ORDER BY actor_login, d
             if (globalMax === 0) globalMax = 1;
 
             // Sort members by total activity for the current metric, filtering out deleted logins
-            const sortedMembers = Object.keys(allData)
+            const sortedMembers = Object.keys(data)
                 .filter(member => !deletedLogins.has(member))
                 .sort((a, b) => {
-                    const totalA = getTotalActivity(allData[a], metric);
-                    const totalB = getTotalActivity(allData[b], metric);
+                    const totalA = getTotalActivity(data[a], metric);
+                    const totalB = getTotalActivity(data[b], metric);
                     return totalB - totalA;
                 });
 
@@ -926,14 +965,14 @@ ORDER BY actor_login, d
             let maxTotal = 0;
             let sumTotal = 0;
             displayMembers.forEach(member => {
-                const total = getTotalActivity(allData[member], metric);
+                const total = getTotalActivity(data[member], metric);
                 if (total > maxTotal) maxTotal = total;
                 sumTotal += total;
             });
 
             let orderNumber = 1;
             displayMembers.forEach(member => {
-                const memberData = allData[member];
+                const memberData = data[member];
                 const total = getTotalActivity(memberData, metric);
 
                 if (total === 0 && memberData[metric].length === 0) return;
@@ -942,7 +981,7 @@ ORDER BY actor_login, d
                 row.className = 'chart-row';
 
                 // Check if member is in core team (for "Everyone" mode highlighting)
-                const orgs = currentOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
+                const orgs = orgName.split(',').map(o => o.trim()).filter(o => o.length > 0);
                 const isClickHouse = orgs.some(org => org === 'ClickHouse' || org.startsWith('ClickHouse/'));
                 const isEveryone = isClickHouse ? document.getElementById('everyone-toggle').checked : true;
                 const coreTeamList = getTeamMembers();
@@ -1011,6 +1050,59 @@ ORDER BY actor_login, d
             });
         }
 
+        function renderCharts(metric) {
+            // Update legend text based on grouping
+            let granularityText;
+            if (currentGrouping === 'auto') {
+                granularityText = currentTimeRange === '3' ? 'daily aggregation' :
+                                 (currentTimeRange === '6' || currentTimeRange === '12') ? 'weekly aggregation' :
+                                 'monthly aggregation';
+            } else if (currentGrouping === 'quarter') {
+                granularityText = 'quarterly aggregation';
+            } else if (currentGrouping === 'month') {
+                granularityText = 'monthly aggregation';
+            } else if (currentGrouping === 'week') {
+                granularityText = 'weekly aggregation';
+            } else if (currentGrouping === 'day') {
+                granularityText = 'daily aggregation';
+            }
+            document.getElementById('legend-text').textContent =
+                `Horizon charts show activity over time (${granularityText}) - color bands represent different activity levels`;
+
+            const wrapper = document.getElementById('charts-wrapper');
+
+            if (comparisonMode && comparisonOrg && allDataComparison) {
+                // Comparison mode: two columns
+                wrapper.innerHTML = `
+                    <div class="comparison-wrapper">
+                        <div class="comparison-column">
+                            <div class="comparison-column-title">${currentOrg}</div>
+                            <div id="chart-container-1" class="chart-container"></div>
+                        </div>
+                        <div class="comparison-column">
+                            <div class="comparison-column-title">${comparisonOrg}</div>
+                            <div id="chart-container-2" class="chart-container"></div>
+                        </div>
+                    </div>
+                `;
+
+                const container1 = document.getElementById('chart-container-1');
+                const container2 = document.getElementById('chart-container-2');
+
+                container1.style.display = 'flex';
+                container2.style.display = 'flex';
+
+                renderSingleChart(container1, allData, metric, currentOrg);
+                renderSingleChart(container2, allDataComparison, metric, comparisonOrg);
+            } else {
+                // Normal mode: single column
+                wrapper.innerHTML = '<div id="chart-container" class="chart-container"></div>';
+                const container = document.getElementById('chart-container');
+                container.style.display = 'flex';
+                renderSingleChart(container, allData, metric, currentOrg);
+            }
+        }
+
         function showError(message) {
             const errorContainer = document.getElementById('error-container');
             errorContainer.innerHTML = `<div class="error">Error: ${message}</div>`;
@@ -1023,14 +1115,25 @@ ORDER BY actor_login, d
         async function loadData() {
             try {
                 document.getElementById('loading').style.display = 'block';
-                document.getElementById('chart-container').style.display = 'none';
+                document.getElementById('charts-wrapper').querySelector('.chart-container').style.display = 'none';
                 hideError();
 
-                const data = await fetchData();
-                allData = processData(data);
+                if (comparisonMode && comparisonOrg) {
+                    // Fetch both datasets in comparison mode
+                    const [data1, data2] = await Promise.all([
+                        fetchData(currentOrg),
+                        fetchData(comparisonOrg)
+                    ]);
+                    allData = processData(data1);
+                    allDataComparison = processData(data2);
+                } else {
+                    // Normal mode: fetch single dataset
+                    const data = await fetchData();
+                    allData = processData(data);
+                    allDataComparison = null;
+                }
 
                 document.getElementById('loading').style.display = 'none';
-                document.getElementById('chart-container').style.display = 'flex';
 
                 renderCharts(currentMetric);
             } catch (error) {
@@ -1101,6 +1204,38 @@ ORDER BY actor_login, d
             }
         });
 
+        // Comparison toggle
+        const comparisonToggle = document.getElementById('comparison-toggle');
+        const comparisonOrgSelector = document.getElementById('comparison-org-selector');
+        comparisonToggle.addEventListener('change', () => {
+            comparisonMode = comparisonToggle.checked;
+            if (comparisonMode) {
+                comparisonOrgSelector.style.display = '';
+            } else {
+                comparisonOrgSelector.style.display = 'none';
+            }
+            updateUrlHash();
+            loadData();
+        });
+
+        // Comparison org input
+        const comparisonOrgInput = document.getElementById('comparison-org-input');
+        comparisonOrgInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                comparisonOrg = comparisonOrgInput.value.trim();
+                updateUrlHash();
+                loadData();
+            }
+        });
+        comparisonOrgInput.addEventListener('blur', () => {
+            const newCompOrg = comparisonOrgInput.value.trim();
+            if (newCompOrg !== comparisonOrg) {
+                comparisonOrg = newCompOrg;
+                updateUrlHash();
+                loadData();
+            }
+        });
+
         // Initial load
         const hasHashState = loadStateFromHash();
 
@@ -1130,6 +1265,11 @@ ORDER BY actor_login, d
         });
 
         updateToggleVisibility();
+
+        // Update comparison org selector visibility
+        if (comparisonMode) {
+            document.getElementById('comparison-org-selector').style.display = '';
+        }
 
         // Update hash if not loaded from hash
         if (!hasHashState) {
@@ -1166,6 +1306,14 @@ ORDER BY actor_login, d
             });
 
             updateToggleVisibility();
+
+            // Update comparison org selector visibility
+            if (comparisonMode) {
+                document.getElementById('comparison-org-selector').style.display = '';
+            } else {
+                document.getElementById('comparison-org-selector').style.display = 'none';
+            }
+
             loadData();
         });
 
