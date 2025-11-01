@@ -369,7 +369,6 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-                <button class="btn" id="refresh-btn" style="margin-left: auto;">Refresh Data</button>
             </div>
         </div>
 
@@ -864,8 +863,6 @@ ORDER BY actor_login, d
                 loadData();
             });
         });
-
-        document.getElementById('refresh-btn').addEventListener('click', loadData);
 
         document.getElementById('alexey-toggle').addEventListener('change', loadData);
 
