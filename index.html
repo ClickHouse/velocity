@@ -979,7 +979,7 @@ ORDER BY actor_login, d
             return memberData[metric].reduce((sum, val) => sum + val, 0);
         }
 
-        function renderSingleChart(container, data, metric, orgName) {
+        function renderSingleChart(container, data, metric, orgName, providedMaxTotal = null) {
             container.innerHTML = '';
 
             if (!data) return;
@@ -1010,13 +1010,15 @@ ORDER BY actor_login, d
             const displayMembers = sortedMembers.slice(0, 100);
 
             // Calculate maximum total for bar calculations and sum for percentages
-            let maxTotal = 0;
+            let maxTotal = providedMaxTotal;
             let sumTotal = 0;
             displayMembers.forEach(member => {
                 const total = getTotalActivity(data[member], metric);
-                if (total > maxTotal) maxTotal = total;
+                if (!providedMaxTotal && total > maxTotal) maxTotal = total;
                 sumTotal += total;
             });
+
+            if (!maxTotal) maxTotal = 0;
 
             let orderNumber = 1;
             displayMembers.forEach(member => {
@@ -1149,8 +1151,41 @@ ORDER BY actor_login, d
                 container1.style.display = 'flex';
                 container2.style.display = 'flex';
 
-                renderSingleChart(container1, allData, metric, currentOrg);
-                renderSingleChart(container2, allDataComparison, metric, comparisonOrg);
+                // Calculate unified maximum total across both datasets for aligned bar widths
+                let unifiedMaxTotal = 0;
+
+                // Get top 100 from first dataset
+                const sortedMembers1 = Object.keys(allData)
+                    .filter(member => !deletedLogins.has(member))
+                    .sort((a, b) => {
+                        const totalA = getTotalActivity(allData[a], metric);
+                        const totalB = getTotalActivity(allData[b], metric);
+                        return totalB - totalA;
+                    })
+                    .slice(0, 100);
+
+                sortedMembers1.forEach(member => {
+                    const total = getTotalActivity(allData[member], metric);
+                    if (total > unifiedMaxTotal) unifiedMaxTotal = total;
+                });
+
+                // Get top 100 from second dataset
+                const sortedMembers2 = Object.keys(allDataComparison)
+                    .filter(member => !deletedLogins.has(member))
+                    .sort((a, b) => {
+                        const totalA = getTotalActivity(allDataComparison[a], metric);
+                        const totalB = getTotalActivity(allDataComparison[b], metric);
+                        return totalB - totalA;
+                    })
+                    .slice(0, 100);
+
+                sortedMembers2.forEach(member => {
+                    const total = getTotalActivity(allDataComparison[member], metric);
+                    if (total > unifiedMaxTotal) unifiedMaxTotal = total;
+                });
+
+                renderSingleChart(container1, allData, metric, currentOrg, unifiedMaxTotal);
+                renderSingleChart(container2, allDataComparison, metric, comparisonOrg, unifiedMaxTotal);
             } else {
                 // Normal mode: single column
                 wrapper.innerHTML = '<div id="chart-container" class="chart-container"></div>';
