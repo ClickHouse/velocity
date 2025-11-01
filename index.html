@@ -519,16 +519,14 @@
             </div>
             <div class="controls-row">
                 <div class="toggle-container">
-                    <span>With Alexey</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="alexey-toggle">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div class="toggle-container">
-                    <span>Everyone</span>
+                    <span>Core team only</span>
                     <label class="toggle-switch">
                         <input type="checkbox" id="everyone-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span id="alexey-toggle-wrapper" style="display: none; margin-left: 15px;">With Alexey</span>
+                    <label class="toggle-switch" id="alexey-toggle-switch" style="display: none; margin-left: 8px;">
+                        <input type="checkbox" id="alexey-toggle">
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
@@ -670,26 +668,37 @@
         }
 
         function updateToggleVisibility() {
-            const alexeyToggle = document.getElementById('alexey-toggle').parentElement.parentElement;
-            const everyoneToggle = document.getElementById('everyone-toggle').parentElement.parentElement;
-
-            // In comparison mode, hide both toggles (they're assumed to be on)
-            if (comparisonMode) {
-                alexeyToggle.style.display = 'none';
-                everyoneToggle.style.display = 'none';
-                return;
-            }
+            const coreTeamToggle = document.getElementById('everyone-toggle').parentElement.parentElement;
+            const alexeyWrapper = document.getElementById('alexey-toggle-wrapper');
+            const alexeySwitch = document.getElementById('alexey-toggle-switch');
 
             // Normal mode: show toggles only for ClickHouse
             const orgs = currentOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
             const isClickHouse = orgs.some(org => org === 'ClickHouse' || org.startsWith('ClickHouse/'));
 
+            // In comparison mode, hide the toggle (core team is assumed to be off)
+            if (comparisonMode) {
+                coreTeamToggle.style.display = 'none';
+                alexeyWrapper.style.display = 'none';
+                alexeySwitch.style.display = 'none';
+                return;
+            }
+
             if (isClickHouse) {
-                alexeyToggle.style.display = '';
-                everyoneToggle.style.display = '';
+                coreTeamToggle.style.display = '';
+                // Show "With Alexey" only if "Core team only" is checked
+                const coreTeamOnly = document.getElementById('everyone-toggle').checked;
+                if (coreTeamOnly) {
+                    alexeyWrapper.style.display = '';
+                    alexeySwitch.style.display = '';
+                } else {
+                    alexeyWrapper.style.display = 'none';
+                    alexeySwitch.style.display = 'none';
+                }
             } else {
-                alexeyToggle.style.display = 'none';
-                everyoneToggle.style.display = 'none';
+                coreTeamToggle.style.display = 'none';
+                alexeyWrapper.style.display = 'none';
+                alexeySwitch.style.display = 'none';
             }
         }
 
@@ -815,11 +824,11 @@ LIMIT 1000
 
             // Check if any org is ClickHouse for toggle visibility
             const isClickHouse = orgs.some(org => org === 'ClickHouse' || org.startsWith('ClickHouse/'));
-            // In comparison mode, always use "Everyone" mode
-            const isEveryone = comparisonMode ? true : (isClickHouse ? document.getElementById('everyone-toggle').checked : true);
+            // In comparison mode, always use "Everyone" mode (core team only = false)
+            const coreTeamOnly = comparisonMode ? false : (isClickHouse ? document.getElementById('everyone-toggle').checked : false);
 
             // Build actor filter - either specific team members or everyone
-            const actorFilter = isEveryone ? '' : `AND actor_login IN (${teamMembers.map(m => `'${m}'`).join(', ')})`;
+            const actorFilter = coreTeamOnly ? `AND actor_login IN (${teamMembers.map(m => `'${m}'`).join(', ')})` : '';
 
             // Build repo condition - combine multiple organizations with OR
             const repoConditions = orgs.map(org => {
@@ -900,11 +909,11 @@ ORDER BY actor_login, d
 
             // Check if any org is ClickHouse for toggle visibility
             const isClickHouse = orgs.some(org => org === 'ClickHouse' || org.startsWith('ClickHouse/'));
-            // In comparison mode, always use "Everyone" mode
-            const isEveryone = comparisonMode ? true : (isClickHouse ? document.getElementById('everyone-toggle').checked : true);
+            // In comparison mode, always use "Everyone" mode (core team only = false)
+            const coreTeamOnly = comparisonMode ? false : (isClickHouse ? document.getElementById('everyone-toggle').checked : false);
 
             // Build actor filter - either specific team members or everyone
-            const actorFilter = isEveryone ? '' : `AND actor_login IN (${teamMembers.map(m => `'${m}'`).join(', ')})`;
+            const actorFilter = coreTeamOnly ? `AND actor_login IN (${teamMembers.map(m => `'${m}'`).join(', ')})` : '';
 
             // Build repo condition - combine multiple organizations with OR
             const repoConditions = orgs.map(org => {
@@ -989,8 +998,8 @@ WHERE ${repoCondition}
             // Split by comma and check if any org is ClickHouse
             const orgs = currentOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
             const isClickHouse = orgs.some(org => org === 'ClickHouse' || org.startsWith('ClickHouse/'));
-            // In comparison mode, always use "Everyone" mode
-            const isEveryone = comparisonMode ? true : (isClickHouse ? document.getElementById('everyone-toggle').checked : true);
+            // In comparison mode, always use "Everyone" mode (core team only = false)
+            const coreTeamOnly = comparisonMode ? false : (isClickHouse ? document.getElementById('everyone-toggle').checked : false);
 
             // Get all unique dates - use provided dates if available
             let sortedDates;
@@ -1006,7 +1015,9 @@ WHERE ${repoCondition}
 
             // Get list of members to process
             let membersToProcess;
-            if (isEveryone) {
+            if (coreTeamOnly) {
+                membersToProcess = getTeamMembers();
+            } else {
                 // Get all unique actor_logins from the data
                 const allActors = new Set();
                 data.forEach(row => {
@@ -1015,8 +1026,6 @@ WHERE ${repoCondition}
                     }
                 });
                 membersToProcess = Array.from(allActors);
-            } else {
-                membersToProcess = getTeamMembers();
             }
 
             membersToProcess.forEach(member => {
@@ -1250,15 +1259,15 @@ WHERE ${repoCondition}
                 const row = document.createElement('div');
                 row.className = 'chart-row';
 
-                // Check if member is in core team (for "Everyone" mode highlighting)
+                // Check if member is in core team (for highlighting when not in "Core team only" mode)
                 const orgs = orgName.split(',').map(o => o.trim()).filter(o => o.length > 0);
                 const isClickHouse = orgs.some(org => org === 'ClickHouse' || org.startsWith('ClickHouse/'));
-                // In comparison mode, always use "Everyone" mode
-                const isEveryone = comparisonMode ? true : (isClickHouse ? document.getElementById('everyone-toggle').checked : true);
+                // In comparison mode, always use "Everyone" mode (core team only = false)
+                const coreTeamOnly = comparisonMode ? false : (isClickHouse ? document.getElementById('everyone-toggle').checked : false);
                 const coreTeamList = getTeamMembers();
                 const isCoreTeam = coreTeamList.includes(member);
 
-                if (isEveryone && !isCoreTeam && isClickHouse) {
+                if (!coreTeamOnly && !isCoreTeam && isClickHouse) {
                     row.classList.add('non-core-member');
                 }
 
@@ -1530,6 +1539,7 @@ WHERE ${repoCondition}
         });
 
         document.getElementById('everyone-toggle').addEventListener('change', () => {
+            updateToggleVisibility();
             updateUrlHash();
             loadData();
         });
