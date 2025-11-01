@@ -341,6 +341,7 @@
         <div class="controls">
             <div class="controls-row">
                 <button class="btn active" data-metric="comments">Comments</button>
+                <button class="btn" data-metric="created_issues">Created Issues</button>
                 <button class="btn" data-metric="closed_issues">Closed Issues</button>
                 <button class="btn" data-metric="reviewed_prs">Reviewed PRs</button>
                 <button class="btn" data-metric="opened_prs">Opened PRs</button>
@@ -430,6 +431,7 @@
         const METRIC_LABELS = {
             'opened_prs': 'Opened PRs',
             'reviewed_prs': 'Reviewed PRs',
+            'created_issues': 'Created Issues',
             'closed_issues': 'Closed Issues',
             'comments': 'Comments',
             'all_activity': 'All activity'
@@ -487,6 +489,9 @@
         AND ((event_type = 'PullRequestEvent' AND actor_login = assignee AND action = 'closed')
             OR (event_type = 'PullRequestReviewEvent' AND review_state = 'approved'))`;
                     break;
+                case 'created_issues':
+                    metricCondition = "event_type = 'IssuesEvent' AND action = 'opened'";
+                    break;
                 case 'closed_issues':
                     metricCondition = "event_type = 'IssuesEvent' AND action = 'closed'";
                     break;
@@ -498,6 +503,7 @@
         OR (event_type IN ('PullRequestEvent', 'PullRequestReviewEvent')
             AND ((event_type = 'PullRequestEvent' AND actor_login = assignee AND action = 'closed')
                 OR (event_type = 'PullRequestReviewEvent' AND review_state = 'approved')))
+        OR (event_type = 'IssuesEvent' AND action = 'opened')
         OR (event_type = 'IssuesEvent' AND action = 'closed')
         OR (event_type = 'IssueCommentEvent' AND action = 'created')`;
                     break;
@@ -553,6 +559,7 @@ WITH ${repoCondition} AS repos_condition,
     event_type IN ('PullRequestEvent', 'PullRequestReviewEvent')
         AND ((event_type = 'PullRequestEvent' AND actor_login = assignee AND action = 'closed')
             OR (event_type = 'PullRequestReviewEvent' AND review_state = 'approved')) AS reviewed_prs_cond,
+    event_type = 'IssuesEvent' AND action = 'opened' AS created_issues_cond,
     event_type = 'IssuesEvent' AND action = 'closed' AS closed_issues_cond,
     event_type = 'IssueCommentEvent' AND action = 'created' AS comments_cond
 SELECT
@@ -560,6 +567,7 @@ SELECT
     ${dateGrouping} AS d,
     uniqIf(number, opened_prs_cond) AS opened_prs,
     uniqIf(number, reviewed_prs_cond) AS reviewed_prs,
+    uniqIf(number, created_issues_cond) AS created_issues,
     uniqIf(number, closed_issues_cond) AS closed_issues,
     uniqIf(number, comments_cond) AS comments,
     uniq(number) AS all_activity
@@ -567,7 +575,7 @@ FROM github_events
 WHERE repos_condition
     ${actorFilter}
     ${dateFilter}
-    AND (opened_prs_cond OR reviewed_prs_cond OR closed_issues_cond OR comments_cond)
+    AND (opened_prs_cond OR reviewed_prs_cond OR created_issues_cond OR closed_issues_cond OR comments_cond)
     -- As an optimization, limit the report to top authors:
     AND actor_login IN
     (
@@ -575,7 +583,7 @@ WHERE repos_condition
         FROM github_events
         WHERE repos_condition ${dateFilter}
             AND NOT match(actor_login, '(^(ro)?bot-|-(ro)?bot$|\\[bot\\]|(-commenter|-importer|QA|io|Jenkins)$|CLAassistant|googlebot|^Apache)')
-            AND (opened_prs_cond OR reviewed_prs_cond OR closed_issues_cond OR comments_cond)
+            AND (opened_prs_cond OR reviewed_prs_cond OR created_issues_cond OR closed_issues_cond OR comments_cond)
         GROUP BY actor_login
         ORDER BY uniq(number) DESC
         LIMIT 1000
@@ -640,6 +648,7 @@ ORDER BY actor_login, d
                     dates: sortedDates,
                     opened_prs: sortedDates.map(d => memberMap[d]?.opened_prs || 0),
                     reviewed_prs: sortedDates.map(d => memberMap[d]?.reviewed_prs || 0),
+                    created_issues: sortedDates.map(d => memberMap[d]?.created_issues || 0),
                     closed_issues: sortedDates.map(d => memberMap[d]?.closed_issues || 0),
                     comments: sortedDates.map(d => memberMap[d]?.comments || 0),
                     all_activity: sortedDates.map(d => memberMap[d]?.all_activity || 0)
