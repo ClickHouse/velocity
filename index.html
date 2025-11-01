@@ -908,7 +908,7 @@ ORDER BY actor_login, d
                 .attr('preserveAspectRatio', 'none');
 
             const xScale = d3.scaleLinear()
-                .domain([0, data.length - 1])
+                .domain([0, data.length])
                 .range([0, width]);
 
             const yScale = d3.scaleLinear()
@@ -971,7 +971,7 @@ ORDER BY actor_login, d
 
                     if (clampedValue > 0) {
                         const x1 = xScale(i);
-                        const x2 = i < data.length - 1 ? xScale(i + 1) : width;
+                        const x2 = xScale(i + 1);
                         const y = yScale(clampedValue);
 
                         // Get hue from repo_hash
@@ -1010,7 +1010,7 @@ ORDER BY actor_login, d
                 .attr('fill', 'transparent')
                 .on('mousemove', function(event) {
                     const [mouseX] = d3.pointer(event, this);
-                    const dataIndex = Math.floor(mouseX / width * data.length);
+                    const dataIndex = Math.min(Math.floor(xScale.invert(mouseX)), data.length - 1);
 
                     if (dataIndex >= 0 && dataIndex < data.length) {
                         const value = data[dataIndex];
@@ -1024,7 +1024,7 @@ ORDER BY actor_login, d
 
                         // Update highlight
                         const x1 = xScale(dataIndex);
-                        const x2 = dataIndex < data.length - 1 ? xScale(dataIndex + 1) : width;
+                        const x2 = xScale(dataIndex + 1);
                         highlight
                             .attr('x', x1)
                             .attr('width', x2 - x1)
