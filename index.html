@@ -549,6 +549,8 @@
 
         .header-right {
             flex-shrink: 0;
+            display: flex;
+            align-items: flex-start;
         }
 
         .comparison-wrapper {
@@ -610,10 +612,12 @@
             padding: 0;
             margin: 0;
             margin-right: 12px;
+            margin-top: 8px;
             transition: transform 0.2s ease, opacity 0.2s ease;
             display: inline-flex;
             align-items: center;
             opacity: 0.7;
+            flex-shrink: 0;
         }
 
         .theme-switcher:hover {
@@ -638,24 +642,26 @@
                 <p>Activity metrics for ClickHouse Core team members</p>
             </div>
             <div class="header-right">
-                <div class="org-selector">
-                    <button class="theme-switcher" id="theme-switcher">☀️</button>
-                    <label for="org-input">Organization(s)/Repository(s):</label>
-                    <input type="text" id="org-input" value="ClickHouse" placeholder="e.g., apache, google, or apache/spark, google/guava" autocomplete="off" />
-                    <div id="org-autocomplete" class="autocomplete-dropdown"></div>
-                </div>
-                <div class="comparison-row" style="margin-top: 10px;">
-                    <div class="toggle-container">
-                        <span>Compare</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="comparison-toggle">
-                            <span class="toggle-slider"></span>
-                        </label>
+                <button class="theme-switcher" id="theme-switcher">☀️</button>
+                <div>
+                    <div class="org-selector">
+                        <label for="org-input">Organization(s)/Repository(s):</label>
+                        <input type="text" id="org-input" value="ClickHouse" placeholder="e.g., apache, google, or apache/spark, google/guava" autocomplete="off" />
+                        <div id="org-autocomplete" class="autocomplete-dropdown"></div>
                     </div>
-                    <div class="org-selector comparison-org-selector" id="comparison-org-selector" style="display: none;">
-                        <label for="comparison-org-input">with:</label>
-                        <input type="text" id="comparison-org-input" value="" placeholder="e.g., apache, google, or apache/spark, google/guava" autocomplete="off" />
-                        <div id="comparison-autocomplete" class="autocomplete-dropdown"></div>
+                    <div class="comparison-row" style="margin-top: 10px;">
+                        <div class="toggle-container">
+                            <span>Compare</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="comparison-toggle">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="org-selector comparison-org-selector" id="comparison-org-selector" style="display: none;">
+                            <label for="comparison-org-input">with:</label>
+                            <input type="text" id="comparison-org-input" value="" placeholder="e.g., apache, google, or apache/spark, google/guava" autocomplete="off" />
+                            <div id="comparison-autocomplete" class="autocomplete-dropdown"></div>
+                        </div>
                     </div>
                 </div>
             </div>
