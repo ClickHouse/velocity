@@ -1512,8 +1512,8 @@ WHERE ${repoCondition}
                     const chartWidthRatio = centerX / width;
                     const tooltipX = svgRect.left + (svgRect.width * chartWidthRatio);
 
-                    tooltip.style.left = tooltipX + 'px';
-                    tooltip.style.top = (svgRect.bottom + 8) + 'px';
+                    tooltip.style.left = (tooltipX + window.pageXOffset) + 'px';
+                    tooltip.style.top = (svgRect.bottom + 8 + window.pageYOffset) + 'px';
 
                     // Update highlight
                     highlight
