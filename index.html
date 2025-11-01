@@ -32,6 +32,11 @@
             --autocomplete-selected: #e6f2ff;
             --tooltip-bg: #ffffff;
             --tooltip-border: #ccc;
+            --stat-bar-gradient: linear-gradient(90deg, #6baed6, #2171b5);
+            --legend-band-1: #c6dbef;
+            --legend-band-2: #9ecae1;
+            --legend-band-3: #6baed6;
+            --legend-band-4: #2171b5;
         }
 
         body.dark-theme {
@@ -57,6 +62,11 @@
             --autocomplete-selected: #404020;
             --tooltip-bg: #2a2a2a;
             --tooltip-border: #555555;
+            --stat-bar-gradient: linear-gradient(90deg, #ffff60, #ffff80);
+            --legend-band-1: #80804d;
+            --legend-band-2: #aaaa66;
+            --legend-band-3: #dddd80;
+            --legend-band-4: #ffff80;
         }
 
         * {
@@ -314,7 +324,7 @@
 
         .stat-bar {
             height: 100%;
-            background: linear-gradient(90deg, #6baed6, #2171b5);
+            background: var(--stat-bar-gradient);
             border-radius: 2px;
             transition: width 0.3s ease;
         }
@@ -352,6 +362,22 @@
             width: 30px;
             height: 15px;
             border: 1px solid var(--border-color);
+        }
+
+        .legend-band-1 {
+            background: var(--legend-band-1);
+        }
+
+        .legend-band-2 {
+            background: var(--legend-band-2);
+        }
+
+        .legend-band-3 {
+            background: var(--legend-band-3);
+        }
+
+        .legend-band-4 {
+            background: var(--legend-band-4);
         }
 
         .comparison-row {
@@ -716,10 +742,10 @@
             <span id="legend-text">Horizon charts show activity over time - color bands represent different activity levels</span>
             <div class="legend-scale">
                 <span>Low</span>
-                <div class="legend-band" style="background: #c6dbef;"></div>
-                <div class="legend-band" style="background: #9ecae1;"></div>
-                <div class="legend-band" style="background: #6baed6;"></div>
-                <div class="legend-band" style="background: #2171b5;"></div>
+                <div class="legend-band legend-band-1"></div>
+                <div class="legend-band legend-band-2"></div>
+                <div class="legend-band legend-band-3"></div>
+                <div class="legend-band legend-band-4"></div>
                 <span>High</span>
             </div>
         </div>
