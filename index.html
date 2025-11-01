@@ -748,9 +748,10 @@
             }
         }
 
-        function generateUserActivityQuery(actorLogin, metric) {
+        function generateUserActivityQuery(actorLogin, metric, orgToFetch = null) {
             const dateFilter = getDateFilter();
-            const orgs = currentOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
+            const targetOrg = orgToFetch || currentOrg;
+            const orgs = targetOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
 
             // Build repo condition
             const repoConditions = orgs.map(org => {
@@ -813,8 +814,8 @@ LIMIT 1000
 `.trim();
         }
 
-        function generatePlaygroundUrl(actorLogin, metric) {
-            const query = generateUserActivityQuery(actorLogin, metric);
+        function generatePlaygroundUrl(actorLogin, metric, orgToFetch = null) {
+            const query = generateUserActivityQuery(actorLogin, metric, orgToFetch);
             const base64Query = btoa(query);
             return `https://play.clickhouse.com/play?user=play&run=1#${base64Query}`;
         }
@@ -1293,7 +1294,7 @@ WHERE ${repoCondition}
 
                 const nameDiv = document.createElement('div');
                 nameDiv.className = 'author-name';
-                const playgroundUrl = generatePlaygroundUrl(member, metric);
+                const playgroundUrl = generatePlaygroundUrl(member, metric, orgName);
                 const githubProfileUrl = `https://github.com/${member}`;
                 nameDiv.innerHTML = `
                     <span>${orderNumber}. <a href="${playgroundUrl}" target="_blank" rel="noopener noreferrer">${member}</a></span>
