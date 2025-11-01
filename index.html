@@ -194,6 +194,20 @@
             z-index: 1000;
             white-space: nowrap;
             display: none;
+            transform: translateX(-50%);
+        }
+
+        .chart-tooltip::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 6px solid rgba(0, 0, 0, 0.9);
         }
 
         .chart-stats {
@@ -1019,12 +1033,19 @@ ORDER BY actor_login, d
                         // Update tooltip
                         tooltip.innerHTML = `${date}: ${value}`;
                         tooltip.style.display = 'block';
-                        tooltip.style.left = (event.pageX + 10) + 'px';
-                        tooltip.style.top = (event.pageY - 10) + 'px';
 
-                        // Update highlight
+                        // Position tooltip at bottom of chart, aligned with data point
+                        const svgRect = svg.node().getBoundingClientRect();
                         const x1 = xScale(dataIndex);
                         const x2 = xScale(dataIndex + 1);
+                        const centerX = (x1 + x2) / 2;
+                        const chartWidthRatio = centerX / width;
+                        const tooltipX = svgRect.left + (svgRect.width * chartWidthRatio);
+
+                        tooltip.style.left = tooltipX + 'px';
+                        tooltip.style.top = (svgRect.bottom + 8) + 'px';
+
+                        // Update highlight
                         highlight
                             .attr('x', x1)
                             .attr('width', x2 - x1)
