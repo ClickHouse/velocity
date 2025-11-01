@@ -411,6 +411,59 @@
         let currentOrg = 'ClickHouse';
         let allData = null;
 
+        function serializeStateToHash() {
+            const params = new URLSearchParams();
+            params.set('org', currentOrg);
+            params.set('metric', currentMetric);
+            params.set('range', currentTimeRange);
+            params.set('alexey', document.getElementById('alexey-toggle').checked ? '1' : '0');
+            params.set('everyone', document.getElementById('everyone-toggle').checked ? '1' : '0');
+            return '#' + params.toString();
+        }
+
+        function updateUrlHash() {
+            const newHash = serializeStateToHash();
+            if (window.location.hash !== newHash) {
+                window.history.replaceState(null, '', newHash);
+            }
+        }
+
+        function loadStateFromHash() {
+            const hash = window.location.hash.slice(1); // Remove #
+            if (!hash) return false;
+
+            const params = new URLSearchParams(hash);
+            let stateChanged = false;
+
+            if (params.has('org')) {
+                currentOrg = params.get('org');
+                document.getElementById('org-input').value = currentOrg;
+                stateChanged = true;
+            }
+
+            if (params.has('metric')) {
+                currentMetric = params.get('metric');
+                stateChanged = true;
+            }
+
+            if (params.has('range')) {
+                currentTimeRange = params.get('range');
+                stateChanged = true;
+            }
+
+            if (params.has('alexey')) {
+                document.getElementById('alexey-toggle').checked = params.get('alexey') === '1';
+                stateChanged = true;
+            }
+
+            if (params.has('everyone')) {
+                document.getElementById('everyone-toggle').checked = params.get('everyone') === '1';
+                stateChanged = true;
+            }
+
+            return stateChanged;
+        }
+
         function updateToggleVisibility() {
             // Split by comma and check if any org is ClickHouse
             const orgs = currentOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
@@ -851,6 +904,7 @@ ORDER BY actor_login, d
                 document.querySelectorAll('.btn[data-metric]').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 currentMetric = e.target.dataset.metric;
+                updateUrlHash();
                 renderCharts(currentMetric);
             });
         });
@@ -860,13 +914,20 @@ ORDER BY actor_login, d
                 document.querySelectorAll('.btn[data-range]').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 currentTimeRange = e.target.dataset.range;
+                updateUrlHash();
                 loadData();
             });
         });
 
-        document.getElementById('alexey-toggle').addEventListener('change', loadData);
+        document.getElementById('alexey-toggle').addEventListener('change', () => {
+            updateUrlHash();
+            loadData();
+        });
 
-        document.getElementById('everyone-toggle').addEventListener('change', loadData);
+        document.getElementById('everyone-toggle').addEventListener('change', () => {
+            updateUrlHash();
+            loadData();
+        });
 
         // Organization input - trigger on Enter key or blur
         const orgInput = document.getElementById('org-input');
@@ -874,6 +935,7 @@ ORDER BY actor_login, d
             if (e.key === 'Enter') {
                 currentOrg = orgInput.value.trim() || 'ClickHouse';
                 updateToggleVisibility();
+                updateUrlHash();
                 loadData();
             }
         });
@@ -882,12 +944,63 @@ ORDER BY actor_login, d
             if (newOrg !== currentOrg) {
                 currentOrg = newOrg;
                 updateToggleVisibility();
+                updateUrlHash();
                 loadData();
             }
         });
 
         // Initial load
+        const hasHashState = loadStateFromHash();
+
+        // Update UI to reflect current state
+        document.querySelectorAll('.btn[data-metric]').forEach(btn => {
+            if (btn.dataset.metric === currentMetric) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        document.querySelectorAll('.btn[data-range]').forEach(btn => {
+            if (btn.dataset.range === currentTimeRange) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
         updateToggleVisibility();
+
+        // Update hash if not loaded from hash
+        if (!hasHashState) {
+            updateUrlHash();
+        }
+
+        // Handle browser back/forward buttons
+        window.addEventListener('hashchange', () => {
+            loadStateFromHash();
+
+            // Update UI to reflect current state
+            document.querySelectorAll('.btn[data-metric]').forEach(btn => {
+                if (btn.dataset.metric === currentMetric) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            document.querySelectorAll('.btn[data-range]').forEach(btn => {
+                if (btn.dataset.range === currentTimeRange) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            updateToggleVisibility();
+            loadData();
+        });
+
         loadData();
     </script>
 </body>
