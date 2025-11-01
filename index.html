@@ -459,6 +459,10 @@
             color: #666;
             margin-top: 5px;
         }
+
+        .org-stats strong {
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -1359,14 +1363,14 @@ WHERE ${repoCondition}
                         <div class="comparison-column">
                             <div class="comparison-column-title">
                                 ${currentOrg}
-                                <div class="org-stats">${stats1.unique_items.toLocaleString()} items · ${stats1.unique_logins.toLocaleString()} logins · ${stats1.total_events.toLocaleString()} events</div>
+                                <div class="org-stats"><strong>${stats1.unique_items.toLocaleString()}</strong> items · <strong>${stats1.unique_logins.toLocaleString()}</strong> authors · <strong>${stats1.total_events.toLocaleString()}</strong> events</div>
                             </div>
                             <div id="chart-container-1" class="chart-container"></div>
                         </div>
                         <div class="comparison-column">
                             <div class="comparison-column-title">
                                 ${comparisonOrg}
-                                <div class="org-stats">${stats2.unique_items.toLocaleString()} items · ${stats2.unique_logins.toLocaleString()} logins · ${stats2.total_events.toLocaleString()} events</div>
+                                <div class="org-stats"><strong>${stats2.unique_items.toLocaleString()}</strong> items · <strong>${stats2.unique_logins.toLocaleString()}</strong> authors · <strong>${stats2.total_events.toLocaleString()}</strong> events</div>
                             </div>
                             <div id="chart-container-2" class="chart-container"></div>
                         </div>
@@ -1423,7 +1427,7 @@ WHERE ${repoCondition}
                     <div class="comparison-column">
                         <div class="comparison-column-title">
                             ${currentOrg}
-                            <div class="org-stats">${stats.unique_items.toLocaleString()} items · ${stats.unique_logins.toLocaleString()} logins · ${stats.total_events.toLocaleString()} events</div>
+                            <div class="org-stats"><strong>${stats.unique_items.toLocaleString()}</strong> items · <strong>${stats.unique_logins.toLocaleString()}</strong> authors · <strong>${stats.total_events.toLocaleString()}</strong> events</div>
                         </div>
                         <div id="chart-container" class="chart-container"></div>
                     </div>
