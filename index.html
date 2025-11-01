@@ -43,8 +43,8 @@
             --bg-primary: #1a1a1a;
             --bg-secondary: #2a2a2a;
             --bg-tertiary: #333333;
-            --bg-proud-gradient: linear-gradient(90deg, #1a1a1a 0%, #1a1a1a 15%, #ffff80 50%, #1a1a1a 85%, #1a1a1a 100%);
-            --bg-proud-hover: linear-gradient(90deg, #ffff80 0%, #ffff80 15%, #2a2a2a 50%, #ffff80 85%, #ffff80 100%);
+            --bg-proud-gradient: linear-gradient(90deg, #1a1a1a 0%, #1a1a1a 15%, yellow 50%, #1a1a1a 85%, #1a1a1a 100%);
+            --bg-proud-hover: linear-gradient(90deg, yellow 0%, yellow 15%, #2a2a2a 50%, yellow 85%, yellow 100%);
             --text-primary: #e0e0e0;
             --text-secondary: #a0a0a0;
             --text-heading: #ffffff;
@@ -67,6 +67,14 @@
             --legend-band-2: #aaaa66;
             --legend-band-3: #dddd80;
             --legend-band-4: #ffff80;
+        }
+
+        body.dark-theme #proud {
+            color: black;
+        }
+
+        body.dark-theme #proud:hover {
+            color: var(--text-heading);
         }
 
         * {
