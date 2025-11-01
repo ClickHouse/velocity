@@ -63,10 +63,10 @@
             --tooltip-bg: #2a2a2a;
             --tooltip-border: #555555;
             --stat-bar-gradient: linear-gradient(90deg, #ffff60, #ffff80);
-            --legend-band-1: #80804d;
-            --legend-band-2: #aaaa66;
-            --legend-band-3: #dddd80;
-            --legend-band-4: #ffff80;
+            --legend-band-1: #ffff80;
+            --legend-band-2: #dddd80;
+            --legend-band-3: #aaaa66;
+            --legend-band-4: #80804d;
         }
 
         body.dark-theme #proud {
@@ -780,6 +780,11 @@
                 themeToggle.textContent = '☀️';
                 localStorage.setItem('theme', 'light');
             }
+
+            // Re-render charts with new theme colors
+            if (allData) {
+                renderCharts(currentMetric);
+            }
         });
 
         const CORE_TEAM_MEMBERS = [
@@ -1333,8 +1338,10 @@ WHERE ${repoCondition}
                 .range([height, 0]);
 
             // Base lightness and chroma for each band in OKLCH
-            const bandLightness = [0.85, 0.75, 0.65, 0.55];
-            const bandChroma = [0.08, 0.10, 0.12, 0.14];
+            // In dark theme, invert lightness so less activity is darker
+            const isDarkTheme = document.body.classList.contains('dark-theme');
+            const bandLightness = isDarkTheme ? [0.55, 0.65, 0.75, 0.85] : [0.85, 0.75, 0.65, 0.55];
+            const bandChroma = isDarkTheme ? [0.14, 0.12, 0.10, 0.08] : [0.08, 0.10, 0.12, 0.14];
 
             // Function to convert hash to hue (0-360 degrees)
             function hashToHue(hash) {
