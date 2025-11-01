@@ -622,7 +622,8 @@ SELECT
     uniqIf(number, created_issues_cond) AS created_issues,
     uniqIf(number, closed_issues_cond) AS closed_issues,
     uniqIf(number, comments_cond) AS comments,
-    uniq(number) AS all_activity
+    uniq(number) AS all_activity,
+    cityHash64(anyHeavy(repo_name)) AS repo_hash
 FROM github_events
 WHERE repos_condition
     ${actorFilter}
@@ -703,14 +704,15 @@ ORDER BY actor_login, d
                     created_issues: sortedDates.map(d => memberMap[d]?.created_issues || 0),
                     closed_issues: sortedDates.map(d => memberMap[d]?.closed_issues || 0),
                     comments: sortedDates.map(d => memberMap[d]?.comments || 0),
-                    all_activity: sortedDates.map(d => memberMap[d]?.all_activity || 0)
+                    all_activity: sortedDates.map(d => memberMap[d]?.all_activity || 0),
+                    repo_hash: sortedDates.map(d => memberMap[d]?.repo_hash || 0)
                 };
             });
 
             return processed;
         }
 
-        function drawHorizonChart(container, data, dates, globalMax) {
+        function drawHorizonChart(container, data, repoHashes, dates, globalMax) {
             if (!data || data.length === 0) return;
 
             const width = 900;
@@ -731,26 +733,77 @@ ORDER BY actor_login, d
                 .domain([0, globalMax / bands])
                 .range([height, 0]);
 
-            // Color scale for horizon bands
-            const colors = ['#c6dbef', '#9ecae1', '#6baed6', '#2171b5'];
+            // Base lightness and chroma for each band in OKLCH
+            const bandLightness = [0.85, 0.75, 0.65, 0.55];
+            const bandChroma = [0.08, 0.10, 0.12, 0.14];
 
-            // Create area generator
-            const area = d3.area()
-                .x((d, i) => xScale(i))
-                .y0(height)
-                .y1((d) => Math.max(0, Math.min(height, yScale(d))));
+            // Function to convert hash to hue (0-360 degrees)
+            function hashToHue(hash) {
+                // Convert UInt64 hash to a number between 0-360
+                // We'll use modulo to wrap it into the 0-360 range
+                return (Number(hash) % 360);
+            }
+
+            // Function to convert OKLCH to RGB
+            function oklchToRgb(l, c, h) {
+                // Convert hue to radians
+                const hRad = h * Math.PI / 180;
+
+                // Convert OKLCH to OKLab
+                const a = c * Math.cos(hRad);
+                const b = c * Math.sin(hRad);
+
+                // OKLab to linear RGB (simplified conversion)
+                const l_ = l + 0.3963377774 * a + 0.2158037573 * b;
+                const m_ = l - 0.1055613458 * a - 0.0638541728 * b;
+                const s_ = l - 0.0894841775 * a - 1.2914855480 * b;
+
+                const l3 = l_ * l_ * l_;
+                const m3 = m_ * m_ * m_;
+                const s3 = s_ * s_ * s_;
+
+                let r = +4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
+                let g = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
+                let b_ = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
+
+                // Gamma correction
+                r = r > 0.0031308 ? 1.055 * Math.pow(r, 1/2.4) - 0.055 : 12.92 * r;
+                g = g > 0.0031308 ? 1.055 * Math.pow(g, 1/2.4) - 0.055 : 12.92 * g;
+                b_ = b_ > 0.0031308 ? 1.055 * Math.pow(b_, 1/2.4) - 0.055 : 12.92 * b_;
+
+                // Clamp to 0-255
+                r = Math.max(0, Math.min(255, Math.round(r * 255)));
+                g = Math.max(0, Math.min(255, Math.round(g * 255)));
+                b_ = Math.max(0, Math.min(255, Math.round(b_ * 255)));
+
+                return `rgb(${r}, ${g}, ${b_})`;
+            }
 
             // Draw each band
             for (let b = 0; b < bands; b++) {
-                const bandData = data.map(v => {
-                    const bandValue = v - (b * globalMax / bands);
-                    return Math.max(0, Math.min(globalMax / bands, bandValue));
-                });
+                // For each data point, draw a segment
+                for (let i = 0; i < data.length; i++) {
+                    const value = data[i];
+                    const bandValue = value - (b * globalMax / bands);
+                    const clampedValue = Math.max(0, Math.min(globalMax / bands, bandValue));
 
-                svg.append('path')
-                    .datum(bandData)
-                    .attr('fill', colors[b])
-                    .attr('d', area);
+                    if (clampedValue > 0) {
+                        const x1 = xScale(i);
+                        const x2 = i < data.length - 1 ? xScale(i + 1) : width;
+                        const y = yScale(clampedValue);
+
+                        // Get hue from repo_hash
+                        const hue = hashToHue(repoHashes[i]);
+                        const color = oklchToRgb(bandLightness[b], bandChroma[b], hue);
+
+                        svg.append('rect')
+                            .attr('x', x1)
+                            .attr('y', y)
+                            .attr('width', x2 - x1)
+                            .attr('height', height - y)
+                            .attr('fill', color);
+                    }
+                }
             }
         }
 
@@ -865,7 +918,7 @@ ORDER BY actor_login, d
                 container.appendChild(row);
 
                 // Draw horizon chart
-                drawHorizonChart(chartDiv, memberData[metric], memberData.dates, globalMax);
+                drawHorizonChart(chartDiv, memberData[metric], memberData.repo_hash, memberData.dates, globalMax);
             });
         }
 
