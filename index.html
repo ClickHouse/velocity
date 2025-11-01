@@ -996,6 +996,13 @@ ORDER BY actor_login, d
                 document.body.appendChild(tooltip);
             }
 
+            // Add highlight overlay rectangle
+            const highlight = svg.append('rect')
+                .attr('height', height)
+                .attr('fill', 'rgba(255, 255, 255, 0.3)')
+                .style('display', 'none')
+                .style('pointer-events', 'none');
+
             // Add invisible overlay for mouse events
             svg.append('rect')
                 .attr('width', width)
@@ -1009,14 +1016,24 @@ ORDER BY actor_login, d
                         const value = data[dataIndex];
                         const date = dates[dataIndex];
 
+                        // Update tooltip
                         tooltip.innerHTML = `${date}: ${value}`;
                         tooltip.style.display = 'block';
                         tooltip.style.left = (event.pageX + 10) + 'px';
                         tooltip.style.top = (event.pageY - 10) + 'px';
+
+                        // Update highlight
+                        const x1 = xScale(dataIndex);
+                        const x2 = dataIndex < data.length - 1 ? xScale(dataIndex + 1) : width;
+                        highlight
+                            .attr('x', x1)
+                            .attr('width', x2 - x1)
+                            .style('display', 'block');
                     }
                 })
                 .on('mouseout', function() {
                     tooltip.style.display = 'none';
+                    highlight.style('display', 'none');
                 });
         }
 
