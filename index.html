@@ -1576,7 +1576,11 @@ WHERE ${repoCondition}
             }
             updateToggleVisibility();
             updateUrlHash();
-            loadData();
+
+            // Only reload data if turning off comparison mode, or if comparison org is already set
+            if (!comparisonMode || comparisonOrg) {
+                loadData();
+            }
         });
 
         // Comparison org input
