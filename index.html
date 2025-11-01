@@ -96,6 +96,30 @@
             background: #f5f5f5;
         }
 
+        .delete-login-btn {
+            opacity: 0;
+            margin-right: 8px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            color: #cc0000;
+            font-size: 18px;
+            line-height: 18px;
+            text-align: center;
+            transition: opacity 0.2s ease;
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+
+        .chart-row:hover .delete-login-btn {
+            opacity: 1;
+        }
+
+        .delete-login-btn:hover {
+            color: #ff0000;
+            transform: scale(1.2);
+        }
+
         .author-name {
             width: 200px;
             font-size: 13px;
@@ -410,6 +434,7 @@
         let currentTimeRange = 'all'; // months, or 'all'
         let currentOrg = 'ClickHouse';
         let allData = null;
+        let deletedLogins = new Set();
 
         function serializeStateToHash() {
             const params = new URLSearchParams();
@@ -418,6 +443,9 @@
             params.set('range', currentTimeRange);
             params.set('alexey', document.getElementById('alexey-toggle').checked ? '1' : '0');
             params.set('everyone', document.getElementById('everyone-toggle').checked ? '1' : '0');
+            if (deletedLogins.size > 0) {
+                params.set('deleted', Array.from(deletedLogins).join(','));
+            }
             return '#' + params.toString();
         }
 
@@ -459,6 +487,13 @@
             if (params.has('everyone')) {
                 document.getElementById('everyone-toggle').checked = params.get('everyone') === '1';
                 stateChanged = true;
+            }
+
+            if (params.has('deleted')) {
+                deletedLogins = new Set(params.get('deleted').split(',').filter(l => l.length > 0));
+                stateChanged = true;
+            } else {
+                deletedLogins = new Set();
             }
 
             return stateChanged;
@@ -824,9 +859,10 @@ ORDER BY actor_login, d
             document.getElementById('legend-text').textContent =
                 `Horizon charts show activity over time (${granularityText}) - color bands represent different activity levels`;
 
-            // Calculate global maximum across all members for this metric
+            // Calculate global maximum across all members for this metric (excluding deleted logins)
             let globalMax = 0;
             Object.keys(allData).forEach(member => {
+                if (deletedLogins.has(member)) return;
                 const memberData = allData[member];
                 const localMax = Math.max(...memberData[metric], 0);
                 if (localMax > globalMax) {
@@ -836,12 +872,14 @@ ORDER BY actor_login, d
 
             if (globalMax === 0) globalMax = 1;
 
-            // Sort members by total activity for the current metric
-            const sortedMembers = Object.keys(allData).sort((a, b) => {
-                const totalA = getTotalActivity(allData[a], metric);
-                const totalB = getTotalActivity(allData[b], metric);
-                return totalB - totalA;
-            });
+            // Sort members by total activity for the current metric, filtering out deleted logins
+            const sortedMembers = Object.keys(allData)
+                .filter(member => !deletedLogins.has(member))
+                .sort((a, b) => {
+                    const totalA = getTotalActivity(allData[a], metric);
+                    const totalB = getTotalActivity(allData[b], metric);
+                    return totalB - totalA;
+                });
 
             // Limit to top 100 contributors
             const displayMembers = sortedMembers.slice(0, 100);
@@ -875,6 +913,18 @@ ORDER BY actor_login, d
                 if (isEveryone && !isCoreTeam && isClickHouse) {
                     row.classList.add('non-core-member');
                 }
+
+                // Delete button
+                const deleteBtn = document.createElement('div');
+                deleteBtn.className = 'delete-login-btn';
+                deleteBtn.innerHTML = '✕';
+                deleteBtn.title = `Hide ${member}`;
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deletedLogins.add(member);
+                    updateUrlHash();
+                    renderCharts(currentMetric);
+                });
 
                 const nameDiv = document.createElement('div');
                 nameDiv.className = 'author-name';
@@ -912,6 +962,7 @@ ORDER BY actor_login, d
                 const chartDiv = document.createElement('div');
                 chartDiv.className = 'horizon-chart';
 
+                row.appendChild(deleteBtn);
                 row.appendChild(nameDiv);
                 row.appendChild(statsDiv);
                 row.appendChild(chartDiv);
