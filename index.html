@@ -779,19 +779,24 @@ ORDER BY actor_login, d
             return result.data;
         }
 
-        function processData(data) {
+        function processData(data, providedDates = null) {
             const processed = {};
             // Split by comma and check if any org is ClickHouse
             const orgs = currentOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
             const isClickHouse = orgs.some(org => org === 'ClickHouse' || org.startsWith('ClickHouse/'));
             const isEveryone = isClickHouse ? document.getElementById('everyone-toggle').checked : true;
 
-            // Get all unique dates
-            const allDates = new Set();
-            data.forEach(row => {
-                allDates.add(row.d);
-            });
-            const sortedDates = Array.from(allDates).sort();
+            // Get all unique dates - use provided dates if available
+            let sortedDates;
+            if (providedDates) {
+                sortedDates = providedDates;
+            } else {
+                const allDates = new Set();
+                data.forEach(row => {
+                    allDates.add(row.d);
+                });
+                sortedDates = Array.from(allDates).sort();
+            }
 
             // Get list of members to process
             let membersToProcess;
@@ -1124,8 +1129,16 @@ ORDER BY actor_login, d
                         fetchData(currentOrg),
                         fetchData(comparisonOrg)
                     ]);
-                    allData = processData(data1);
-                    allDataComparison = processData(data2);
+
+                    // Collect all unique dates from both datasets to align time ranges
+                    const allDates = new Set();
+                    data1.forEach(row => allDates.add(row.d));
+                    data2.forEach(row => allDates.add(row.d));
+                    const unifiedDates = Array.from(allDates).sort();
+
+                    // Process both datasets with the unified date range
+                    allData = processData(data1, unifiedDates);
+                    allDataComparison = processData(data2, unifiedDates);
                 } else {
                     // Normal mode: fetch single dataset
                     const data = await fetchData();
