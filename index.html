@@ -1221,7 +1221,7 @@ WHERE ${repoCondition}
                 return `rgb(${r}, ${g}, ${b_})`;
             }
 
-            // Draw each band
+            // Draw each band (visual elements)
             for (let b = 0; b < bands; b++) {
                 // For each data point, draw a segment
                 for (let i = 0; i < data.length; i++) {
@@ -1238,25 +1238,34 @@ WHERE ${repoCondition}
                         const hue = hashToHue(repoHashes[i]);
                         const color = oklchToRgb(bandLightness[b], bandChroma[b], hue);
 
-                        // Generate URL for this time range
-                        const dateStr = dates[i];
-                        const url = generateTimeRangePlaygroundUrl(actorLogin, metric, orgName, dateStr);
-
-                        // Create a clickable link containing the rectangle
-                        const link = svg.append('a')
-                            .attr('href', url)
-                            .attr('target', '_blank')
-                            .attr('rel', 'noopener noreferrer');
-
-                        link.append('rect')
+                        svg.append('rect')
                             .attr('x', x1)
                             .attr('y', y)
                             .attr('width', x2 - x1)
                             .attr('height', height - y)
-                            .attr('fill', color)
-                            .style('cursor', 'pointer');
+                            .attr('fill', color);
                     }
                 }
+            }
+
+            // Add clickable overlay rectangles for full height
+            for (let i = 0; i < data.length; i++) {
+                const x1 = xScale(i);
+                const x2 = xScale(i + 1);
+                const dateStr = dates[i];
+                const url = generateTimeRangePlaygroundUrl(actorLogin, metric, orgName, dateStr);
+
+                // Create a clickable link with transparent rectangle covering full height
+                const link = svg.append('a')
+                    .attr('href', url);
+
+                link.append('rect')
+                    .attr('x', x1)
+                    .attr('y', 0)
+                    .attr('width', x2 - x1)
+                    .attr('height', height)
+                    .attr('fill', 'transparent')
+                    .style('cursor', 'pointer');
             }
 
             // Create tooltip element
