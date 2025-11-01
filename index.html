@@ -750,15 +750,17 @@ ORDER BY actor_login, d
         function drawHorizonChart(container, data, repoHashes, dates, globalMax) {
             if (!data || data.length === 0) return;
 
-            const width = 900;
+            const width = container.clientWidth || container.offsetWidth || 900;
             const height = 30;
             const bands = 4;
 
             const svg = d3.select(container)
                 .append('svg')
-                .attr('width', width)
+                .attr('width', '100%')
                 .attr('height', height)
-                .style('display', 'block');
+                .style('display', 'block')
+                .attr('viewBox', `0 0 ${width} ${height}`)
+                .attr('preserveAspectRatio', 'none');
 
             const xScale = d3.scaleLinear()
                 .domain([0, data.length - 1])
