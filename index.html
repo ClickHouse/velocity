@@ -1326,21 +1326,24 @@ WHERE ${repoCondition}
             return memberData[metric].reduce((sum, val) => sum + val, 0);
         }
 
-        function renderSingleChart(container, data, metric, orgName, providedMaxTotal = null) {
+        function renderSingleChart(container, data, metric, orgName, providedMaxTotal = null, providedGlobalMax = null) {
             container.innerHTML = '';
 
             if (!data) return;
 
             // Calculate global maximum across all members for this metric (excluding deleted logins)
-            let globalMax = 0;
-            Object.keys(data).forEach(member => {
-                if (deletedLogins.has(member)) return;
-                const memberData = data[member];
-                const localMax = Math.max(...memberData[metric], 0);
-                if (localMax > globalMax) {
-                    globalMax = localMax;
-                }
-            });
+            let globalMax = providedGlobalMax;
+            if (!providedGlobalMax) {
+                globalMax = 0;
+                Object.keys(data).forEach(member => {
+                    if (deletedLogins.has(member)) return;
+                    const memberData = data[member];
+                    const localMax = Math.max(...memberData[metric], 0);
+                    if (localMax > globalMax) {
+                        globalMax = localMax;
+                    }
+                });
+            }
 
             if (globalMax === 0) globalMax = 1;
 
@@ -1519,6 +1522,8 @@ WHERE ${repoCondition}
 
                 // Calculate unified maximum total across both datasets for aligned bar widths
                 let unifiedMaxTotal = 0;
+                // Calculate unified global maximum for horizon chart scale
+                let unifiedGlobalMax = 0;
 
                 // Get top 100 from first dataset
                 const sortedMembers1 = Object.keys(allData)
@@ -1533,6 +1538,11 @@ WHERE ${repoCondition}
                 sortedMembers1.forEach(member => {
                     const total = getTotalActivity(allData[member], metric);
                     if (total > unifiedMaxTotal) unifiedMaxTotal = total;
+
+                    // Calculate max value for horizon chart scale
+                    const memberData = allData[member];
+                    const localMax = Math.max(...memberData[metric], 0);
+                    if (localMax > unifiedGlobalMax) unifiedGlobalMax = localMax;
                 });
 
                 // Get top 100 from second dataset
@@ -1548,10 +1558,17 @@ WHERE ${repoCondition}
                 sortedMembers2.forEach(member => {
                     const total = getTotalActivity(allDataComparison[member], metric);
                     if (total > unifiedMaxTotal) unifiedMaxTotal = total;
+
+                    // Calculate max value for horizon chart scale
+                    const memberData = allDataComparison[member];
+                    const localMax = Math.max(...memberData[metric], 0);
+                    if (localMax > unifiedGlobalMax) unifiedGlobalMax = localMax;
                 });
 
-                renderSingleChart(container1, allData, metric, currentOrg, unifiedMaxTotal);
-                renderSingleChart(container2, allDataComparison, metric, comparisonOrg, unifiedMaxTotal);
+                if (unifiedGlobalMax === 0) unifiedGlobalMax = 1;
+
+                renderSingleChart(container1, allData, metric, currentOrg, unifiedMaxTotal, unifiedGlobalMax);
+                renderSingleChart(container2, allDataComparison, metric, comparisonOrg, unifiedMaxTotal, unifiedGlobalMax);
             } else {
                 // Fetch stats for the org
                 const stats = await fetchAggregateStats(currentOrg, metric);
