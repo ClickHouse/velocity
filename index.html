@@ -878,9 +878,12 @@ ORDER BY actor_login, d
             }
         });
         orgInput.addEventListener('blur', () => {
-            currentOrg = orgInput.value.trim() || 'ClickHouse';
-            updateToggleVisibility();
-            loadData();
+            const newOrg = orgInput.value.trim() || 'ClickHouse';
+            if (newOrg !== currentOrg) {
+                currentOrg = newOrg;
+                updateToggleVisibility();
+                loadData();
+            }
         });
 
         // Initial load
