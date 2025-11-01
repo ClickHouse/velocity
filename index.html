@@ -822,46 +822,24 @@ LIMIT 1000
         function generateTimeRangePlaygroundUrl(actorLogin, metric, orgToFetch, dateStr) {
             const query = generateUserActivityQuery(actorLogin, metric, orgToFetch);
 
-            // Parse the date and determine the time range based on current grouping
-            let startDate, endDate;
-            const date = new Date(dateStr);
-
+            // Determine the grouping function based on current grouping
+            let groupingFunc;
             if (currentGrouping === 'day' || (currentGrouping === 'auto' && currentTimeRange === '3')) {
-                // Daily: same day
-                startDate = dateStr;
-                const nextDay = new Date(date);
-                nextDay.setDate(nextDay.getDate() + 1);
-                endDate = nextDay.toISOString().split('T')[0];
+                groupingFunc = 'toStartOfDay';
             } else if (currentGrouping === 'week' || (currentGrouping === 'auto' && (currentTimeRange === '6' || currentTimeRange === '12'))) {
-                // Weekly: week starting from this date
-                startDate = dateStr;
-                const nextWeek = new Date(date);
-                nextWeek.setDate(nextWeek.getDate() + 7);
-                endDate = nextWeek.toISOString().split('T')[0];
+                groupingFunc = 'toStartOfWeek';
             } else if (currentGrouping === 'month') {
-                // Monthly: month starting from this date
-                startDate = dateStr;
-                const nextMonth = new Date(date);
-                nextMonth.setMonth(nextMonth.getMonth() + 1);
-                endDate = nextMonth.toISOString().split('T')[0];
+                groupingFunc = 'toStartOfMonth';
             } else if (currentGrouping === 'quarter') {
-                // Quarterly: quarter starting from this date
-                startDate = dateStr;
-                const nextQuarter = new Date(date);
-                nextQuarter.setMonth(nextQuarter.getMonth() + 3);
-                endDate = nextQuarter.toISOString().split('T')[0];
+                groupingFunc = 'toStartOfQuarter';
             } else {
-                // Default to month
-                startDate = dateStr;
-                const nextMonth = new Date(date);
-                nextMonth.setMonth(nextMonth.getMonth() + 1);
-                endDate = nextMonth.toISOString().split('T')[0];
+                groupingFunc = 'toStartOfMonth';
             }
 
             // Add time range filter to the query
             const filteredQuery = query.replace(
                 /ORDER BY created_at DESC/,
-                `AND created_at >= '${startDate}' AND created_at < '${endDate}'\nORDER BY created_at DESC`
+                `AND ${groupingFunc}(created_at) = '${dateStr}'\nORDER BY created_at DESC`
             );
 
             const base64Query = btoa(filteredQuery);
@@ -1231,45 +1209,41 @@ WHERE ${repoCondition}
                 .style('display', 'none')
                 .style('pointer-events', 'none');
 
-            // Add invisible overlay for mouse events
-            svg.append('rect')
-                .attr('width', width)
-                .attr('height', height)
-                .attr('fill', 'transparent')
-                .on('mousemove', function(event) {
-                    const [mouseX] = d3.pointer(event, this);
-                    const dataIndex = Math.min(Math.floor(xScale.invert(mouseX)), data.length - 1);
+            // Add mouse event handlers to the SVG itself
+            svg.on('mousemove', function(event) {
+                const [mouseX] = d3.pointer(event, this);
+                const dataIndex = Math.min(Math.floor(xScale.invert(mouseX)), data.length - 1);
 
-                    if (dataIndex >= 0 && dataIndex < data.length) {
-                        const value = data[dataIndex];
-                        const date = dates[dataIndex];
+                if (dataIndex >= 0 && dataIndex < data.length) {
+                    const value = data[dataIndex];
+                    const date = dates[dataIndex];
 
-                        // Update tooltip
-                        tooltip.innerHTML = `${date}: ${value}`;
-                        tooltip.style.display = 'block';
+                    // Update tooltip
+                    tooltip.innerHTML = `${date}: ${value}`;
+                    tooltip.style.display = 'block';
 
-                        // Position tooltip at bottom of chart, aligned with data point
-                        const svgRect = svg.node().getBoundingClientRect();
-                        const x1 = xScale(dataIndex);
-                        const x2 = xScale(dataIndex + 1);
-                        const centerX = (x1 + x2) / 2;
-                        const chartWidthRatio = centerX / width;
-                        const tooltipX = svgRect.left + (svgRect.width * chartWidthRatio);
+                    // Position tooltip at bottom of chart, aligned with data point
+                    const svgRect = svg.node().getBoundingClientRect();
+                    const x1 = xScale(dataIndex);
+                    const x2 = xScale(dataIndex + 1);
+                    const centerX = (x1 + x2) / 2;
+                    const chartWidthRatio = centerX / width;
+                    const tooltipX = svgRect.left + (svgRect.width * chartWidthRatio);
 
-                        tooltip.style.left = tooltipX + 'px';
-                        tooltip.style.top = (svgRect.bottom + 8) + 'px';
+                    tooltip.style.left = tooltipX + 'px';
+                    tooltip.style.top = (svgRect.bottom + 8) + 'px';
 
-                        // Update highlight
-                        highlight
-                            .attr('x', x1)
-                            .attr('width', x2 - x1)
-                            .style('display', 'block');
-                    }
-                })
-                .on('mouseout', function() {
-                    tooltip.style.display = 'none';
-                    highlight.style('display', 'none');
-                });
+                    // Update highlight
+                    highlight
+                        .attr('x', x1)
+                        .attr('width', x2 - x1)
+                        .style('display', 'block');
+                }
+            })
+            .on('mouseout', function() {
+                tooltip.style.display = 'none';
+                highlight.style('display', 'none');
+            });
         }
 
         function getTotalActivity(memberData, metric) {
