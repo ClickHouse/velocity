@@ -2,7 +2,7 @@
 
 A comprehensive, interactive dashboard for visualizing GitHub activity metrics across organizations and repositories. Built as a single-page application that queries the ClickHouse public dataset of GitHub events.
 
-🔗 **Live Demo:** [Open the dashboard](index.html)
+🔗 **Live Demo:** [Open the dashboard](https://velocity.clickhouse.com/)
 
 ## Features
 
@@ -98,14 +98,6 @@ Complete URL hash-based state persistence:
 
 Share links with exact dashboard state preserved!
 
-### 🎨 Modern UI
-
-- **Inter font** - Clean, modern geometric sans-serif
-- **Light gray background** (#eeeeee) with white containers
-- **Responsive design** - Adapts to different screen sizes
-- **Smooth animations** - Polished hover and transition effects
-- **Custom favicon** - Yellow bar chart on black background
-
 ### ⚡ Performance
 
 - Queries the public ClickHouse GitHub events dataset
@@ -181,7 +173,7 @@ The dashboard includes a predefined list of ClickHouse core team members for fil
 
 ## License
 
-[Apache License 2.0](LICENSE)
+[Creative Commons Attribution-NonCommercial-ShareAlike 4.0](LICENSE)
 
 ## Contributing
 
