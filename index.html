@@ -379,6 +379,14 @@
                 <button class="btn active" data-range="all">All time</button>
             </div>
             <div class="controls-row">
+                <span class="time-range-label">Grouping:</span>
+                <button class="btn active" data-grouping="auto">Auto</button>
+                <button class="btn" data-grouping="quarter">Quarter</button>
+                <button class="btn" data-grouping="month">Month</button>
+                <button class="btn" data-grouping="week">Week</button>
+                <button class="btn" data-grouping="day">Day</button>
+            </div>
+            <div class="controls-row">
                 <div class="toggle-container">
                     <span>With Alexey</span>
                     <label class="toggle-switch">
@@ -432,6 +440,7 @@
 
         let currentMetric = 'all_activity';
         let currentTimeRange = 'all'; // months, or 'all'
+        let currentGrouping = 'auto'; // auto, quarter, month, week, day
         let currentOrg = 'ClickHouse';
         let allData = null;
         let deletedLogins = new Set();
@@ -441,6 +450,7 @@
             params.set('org', currentOrg);
             params.set('metric', currentMetric);
             params.set('range', currentTimeRange);
+            params.set('grouping', currentGrouping);
             params.set('alexey', document.getElementById('alexey-toggle').checked ? '1' : '0');
             params.set('everyone', document.getElementById('everyone-toggle').checked ? '1' : '0');
             if (deletedLogins.size > 0) {
@@ -476,6 +486,11 @@
 
             if (params.has('range')) {
                 currentTimeRange = params.get('range');
+                stateChanged = true;
+            }
+
+            if (params.has('grouping')) {
+                currentGrouping = params.get('grouping');
                 stateChanged = true;
             }
 
@@ -533,13 +548,23 @@
         }
 
         function getDateGrouping() {
-            // 3 months: by days, 6 months: by weeks, 12 months: by weeks, all time: by months
-            if (currentTimeRange === '3') {
-                return 'toStartOfDay(created_at)';
-            } else if (currentTimeRange === '6' || currentTimeRange === '12') {
-                return 'toStartOfWeek(created_at)';
-            } else {
+            if (currentGrouping === 'auto') {
+                // Auto: 3 months: by days, 6 months: by weeks, 12 months: by weeks, all time: by months
+                if (currentTimeRange === '3') {
+                    return 'toStartOfDay(created_at)';
+                } else if (currentTimeRange === '6' || currentTimeRange === '12') {
+                    return 'toStartOfWeek(created_at)';
+                } else {
+                    return 'toStartOfMonth(created_at)';
+                }
+            } else if (currentGrouping === 'quarter') {
+                return 'toStartOfQuarter(created_at)';
+            } else if (currentGrouping === 'month') {
                 return 'toStartOfMonth(created_at)';
+            } else if (currentGrouping === 'week') {
+                return 'toStartOfWeek(created_at)';
+            } else if (currentGrouping === 'day') {
+                return 'toStartOfDay(created_at)';
             }
         }
 
@@ -854,10 +879,21 @@ ORDER BY actor_login, d
 
             if (!allData) return;
 
-            // Update legend text based on time range
-            const granularityText = currentTimeRange === '3' ? 'daily aggregation' :
-                                   (currentTimeRange === '6' || currentTimeRange === '12') ? 'weekly aggregation' :
-                                   'monthly aggregation';
+            // Update legend text based on grouping
+            let granularityText;
+            if (currentGrouping === 'auto') {
+                granularityText = currentTimeRange === '3' ? 'daily aggregation' :
+                                 (currentTimeRange === '6' || currentTimeRange === '12') ? 'weekly aggregation' :
+                                 'monthly aggregation';
+            } else if (currentGrouping === 'quarter') {
+                granularityText = 'quarterly aggregation';
+            } else if (currentGrouping === 'month') {
+                granularityText = 'monthly aggregation';
+            } else if (currentGrouping === 'week') {
+                granularityText = 'weekly aggregation';
+            } else if (currentGrouping === 'day') {
+                granularityText = 'daily aggregation';
+            }
             document.getElementById('legend-text').textContent =
                 `Horizon charts show activity over time (${granularityText}) - color bands represent different activity levels`;
 
@@ -1025,6 +1061,16 @@ ORDER BY actor_login, d
             });
         });
 
+        document.querySelectorAll('.btn[data-grouping]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.btn[data-grouping]').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentGrouping = e.target.dataset.grouping;
+                updateUrlHash();
+                loadData();
+            });
+        });
+
         document.getElementById('alexey-toggle').addEventListener('change', () => {
             updateUrlHash();
             loadData();
@@ -1075,6 +1121,14 @@ ORDER BY actor_login, d
             }
         });
 
+        document.querySelectorAll('.btn[data-grouping]').forEach(btn => {
+            if (btn.dataset.grouping === currentGrouping) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
         updateToggleVisibility();
 
         // Update hash if not loaded from hash
@@ -1097,6 +1151,14 @@ ORDER BY actor_login, d
 
             document.querySelectorAll('.btn[data-range]').forEach(btn => {
                 if (btn.dataset.range === currentTimeRange) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            document.querySelectorAll('.btn[data-grouping]').forEach(btn => {
+                if (btn.dataset.grouping === currentGrouping) {
                     btn.classList.add('active');
                 } else {
                     btn.classList.remove('active');
