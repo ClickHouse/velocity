@@ -854,6 +854,14 @@
             }
         }
 
+        function updatePageTitle() {
+            if (comparisonMode && comparisonOrg) {
+                document.title = `${currentOrg} vs. ${comparisonOrg}: Comparison Of The Teams Activity`;
+            } else {
+                document.title = `${currentOrg} Team Activity Dashboard`;
+            }
+        }
+
         function loadStateFromHash() {
             const hash = window.location.hash.slice(1); // Remove #
             if (!hash) return false;
@@ -1810,6 +1818,7 @@ WHERE ${repoCondition}
                 document.getElementById('loading').style.display = 'none';
 
                 renderCharts(currentMetric);
+                updatePageTitle();
             } catch (error) {
                 console.error('Error loading data:', error);
                 document.getElementById('loading').style.display = 'none';
@@ -2102,6 +2111,7 @@ LIMIT 10
             }
             updateToggleVisibility();
             updateUrlHash();
+            updatePageTitle();
 
             // Only reload data if turning off comparison mode, or if comparison org is already set
             if (!comparisonMode || comparisonOrg) {
