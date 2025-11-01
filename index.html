@@ -1772,6 +1772,19 @@ LIMIT 10
                             const suffix = afterSegment ? afterSegment : '';
                             input.value = prefix + item.value + suffix;
                             dropdown.classList.remove('active');
+
+                            // Load data immediately based on which input was used
+                            if (inputId === 'org-input') {
+                                currentOrg = input.value.trim() || 'ClickHouse';
+                                updateToggleVisibility();
+                                updateUrlHash();
+                                loadData();
+                            } else if (inputId === 'comparison-org-input') {
+                                comparisonOrg = input.value.trim();
+                                updateUrlHash();
+                                loadData();
+                            }
+
                             input.focus();
                         });
                         dropdown.appendChild(div);
