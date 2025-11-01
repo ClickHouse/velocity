@@ -855,14 +855,16 @@
         }
 
         function updatePageTitle() {
-            let title;
+            let title, subtitle;
             if (comparisonMode && comparisonOrg) {
                 title = `${currentOrg} vs. ${comparisonOrg}: Comparison Of The Teams Activity`;
+                subtitle = `<b>${currentOrg}</b> vs. <b>${comparisonOrg}</b>: comparison of the teams activity`;
             } else {
                 title = `${currentOrg} Team Activity Dashboard`;
+                subtitle = `<b>${currentOrg}</b> team activity dashboard`;
             }
             document.title = title;
-            document.getElementById('page-subtitle').textContent = title;
+            document.getElementById('page-subtitle').innerHTML = subtitle;
         }
 
         function loadStateFromHash() {
