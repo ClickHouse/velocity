@@ -1357,20 +1357,27 @@ WHERE ${repoCondition}
                     fetchAggregateStats(comparisonOrg, metric)
                 ]);
 
+                // Helper function to color a stat value based on comparison
+                const colorStat = (value1, value2) => {
+                    if (value1 > value2) return `<strong style="color: #228B22">${value1.toLocaleString()}</strong>`;
+                    if (value1 < value2) return `<strong style="color: #DC143C">${value1.toLocaleString()}</strong>`;
+                    return `<strong>${value1.toLocaleString()}</strong>`;
+                };
+
                 // Comparison mode: two columns
                 wrapper.innerHTML = `
                     <div class="comparison-wrapper">
                         <div class="comparison-column">
                             <div class="comparison-column-title">
                                 ${currentOrg}
-                                <div class="org-stats"><strong>${stats1.unique_items.toLocaleString()}</strong> items · <strong>${stats1.unique_logins.toLocaleString()}</strong> authors · <strong>${stats1.total_events.toLocaleString()}</strong> events</div>
+                                <div class="org-stats">${colorStat(stats1.unique_items, stats2.unique_items)} items · ${colorStat(stats1.unique_logins, stats2.unique_logins)} authors · ${colorStat(stats1.total_events, stats2.total_events)} events</div>
                             </div>
                             <div id="chart-container-1" class="chart-container"></div>
                         </div>
                         <div class="comparison-column">
                             <div class="comparison-column-title">
                                 ${comparisonOrg}
-                                <div class="org-stats"><strong>${stats2.unique_items.toLocaleString()}</strong> items · <strong>${stats2.unique_logins.toLocaleString()}</strong> authors · <strong>${stats2.total_events.toLocaleString()}</strong> events</div>
+                                <div class="org-stats">${colorStat(stats2.unique_items, stats1.unique_items)} items · ${colorStat(stats2.unique_logins, stats1.unique_logins)} authors · ${colorStat(stats2.total_events, stats1.total_events)} events</div>
                             </div>
                             <div id="chart-container-2" class="chart-container"></div>
                         </div>
