@@ -1010,10 +1010,12 @@ ORDER BY actor_login, d
                 document.body.appendChild(tooltip);
             }
 
-            // Add highlight overlay rectangle
+            // Add highlight border rectangle
             const highlight = svg.append('rect')
                 .attr('height', height)
-                .attr('fill', 'rgba(0, 0, 0, 0.2)')
+                .attr('fill', 'none')
+                .attr('stroke', '#000')
+                .attr('stroke-width', 2)
                 .style('display', 'none')
                 .style('pointer-events', 'none');
 
