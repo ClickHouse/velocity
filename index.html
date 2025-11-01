@@ -1010,7 +1010,7 @@ ORDER BY actor_login, d
                 .attr('fill', 'transparent')
                 .on('mousemove', function(event) {
                     const [mouseX] = d3.pointer(event, this);
-                    const dataIndex = Math.round(mouseX / width * (data.length - 1));
+                    const dataIndex = Math.floor(mouseX / width * data.length);
 
                     if (dataIndex >= 0 && dataIndex < data.length) {
                         const value = data[dataIndex];
