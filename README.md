@@ -4,7 +4,9 @@ A comprehensive, interactive dashboard for visualizing GitHub activity metrics a
 
 🔗 **Live Demo:** [Open the dashboard](https://velocity.clickhouse.com/)
 
-[![Screenshot](screenshot.png)](https://velocity.clickhouse.com/#org=valkey-io&metric=all_activity&range=6&grouping=auto&alexey=0&everyone=0&compare=1&compareOrg=antirez%2Fredis%2C+redis%2C+RedisLabs)
+[![Screenshot](screenshot1.png)](https://velocity.clickhouse.com/#org=valkey-io&metric=all_activity&range=6&grouping=auto&alexey=0&everyone=0&compare=1&compareOrg=antirez%2Fredis%2C+redis%2C+RedisLabs)
+
+[![Screenshot](screenshot2.png)](https://velocity.clickhouse.com/#org=google%2C+tensorflow%2C+kubernetes&metric=all_activity&range=6&grouping=auto&alexey=0&everyone=0&compare=1&compareOrg=facebook%2C+pytorch&deleted=pytorchmergebot%2CMichaelHudgins)
 
 ## Features
 
