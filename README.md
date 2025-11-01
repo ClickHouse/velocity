@@ -4,6 +4,8 @@ A comprehensive, interactive dashboard for visualizing GitHub activity metrics a
 
 🔗 **Live Demo:** [Open the dashboard](https://velocity.clickhouse.com/)
 
+![Screenshot](screenshot.png)
+
 ## Features
 
 ### 📊 Multiple Metrics
