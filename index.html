@@ -531,9 +531,41 @@
         .org-stats strong {
             font-weight: 600;
         }
+
+        #proud {
+            display: block;
+            width: 100%;
+            font-family: sans-serif;
+            font-size: 14pt;
+            background: linear-gradient(
+                90deg,
+                white 0%,
+                white 15%,
+                yellow 50%,
+                white 85%,
+                white 100%
+            );
+            color: black;
+            text-align: center;
+            padding: 0.125em;
+            text-decoration: none;
+            margin: -20px -20px 20px -20px;
+        }
+
+        #proud:hover {
+            background: linear-gradient(
+                90deg,
+                yellow 0%,
+                yellow 15%,
+                white 50%,
+                yellow 85%,
+                yellow 100%
+            );
+        }
     </style>
 </head>
 <body>
+    <a id="proud" href="https://github.com/ClickHouse/ClickHouse">Proudly made with <b>ClickHouse</b> open-source database</a>
     <div class="container">
         <header>
             <div class="header-left">
