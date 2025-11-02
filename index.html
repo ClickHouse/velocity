@@ -1034,18 +1034,41 @@
             }
         }
 
+        // Helper function to build repo condition with wildcard support
+        function buildRepoCondition(org) {
+            // Check for wildcard
+            const wildcardCount = (org.match(/\*/g) || []).length;
+
+            if (wildcardCount > 1) {
+                throw new Error(`Invalid wildcard syntax in '${org}': only one wildcard (*) is allowed`);
+            }
+
+            if (wildcardCount === 1) {
+                // Remove the wildcard to count other characters
+                const withoutWildcard = org.replace('*', '');
+                if (withoutWildcard.length < 4) {
+                    throw new Error(`Invalid wildcard syntax in '${org}': at least 4 characters required with wildcard`);
+                }
+
+                // Convert wildcard to SQL LIKE pattern
+                const pattern = org.replace('*', '%');
+                return `repo_name LIKE '${pattern}'`;
+            }
+
+            // No wildcard - original logic
+            const isFullRepo = org.includes('/');
+            return isFullRepo
+                ? `repo_name = '${org}'`
+                : `repo_name LIKE '${org}/%'`;
+        }
+
         function generateUserActivityQuery(actorLogin, metric, orgToFetch = null) {
             const dateFilter = getDateFilter();
             const targetOrg = orgToFetch || currentOrg;
             const orgs = targetOrg.split(',').map(o => o.trim()).filter(o => o.length > 0);
 
             // Build repo condition
-            const repoConditions = orgs.map(org => {
-                const isFullRepo = org.includes('/');
-                return isFullRepo
-                    ? `repo_name = '${org}'`
-                    : `repo_name LIKE '${org}/%'`;
-            });
+            const repoConditions = orgs.map(org => buildRepoCondition(org));
             const repoCondition = repoConditions.length > 1
                 ? `(${repoConditions.join(' OR ')})`
                 : repoConditions[0];
@@ -1154,12 +1177,7 @@ LIMIT 1000
             const actorFilter = coreTeamOnly ? `AND actor_login IN (${teamMembers.map(m => `'${m}'`).join(', ')})` : '';
 
             // Build repo condition - combine multiple organizations with OR
-            const repoConditions = orgs.map(org => {
-                const isFullRepo = org.includes('/');
-                return isFullRepo
-                    ? `repo_name = '${org}'`
-                    : `repo_name LIKE '${org}/%'`;
-            });
+            const repoConditions = orgs.map(org => buildRepoCondition(org));
             const repoCondition = repoConditions.length > 1
                 ? `(${repoConditions.join(' OR ')})`
                 : repoConditions[0];
@@ -1239,12 +1257,7 @@ ORDER BY actor_login, d
             const actorFilter = coreTeamOnly ? `AND actor_login IN (${teamMembers.map(m => `'${m}'`).join(', ')})` : '';
 
             // Build repo condition - combine multiple organizations with OR
-            const repoConditions = orgs.map(org => {
-                const isFullRepo = org.includes('/');
-                return isFullRepo
-                    ? `repo_name = '${org}'`
-                    : `repo_name LIKE '${org}/%'`;
-            });
+            const repoConditions = orgs.map(org => buildRepoCondition(org));
             const repoCondition = repoConditions.length > 1
                 ? `(${repoConditions.join(' OR ')})`
                 : repoConditions[0];
