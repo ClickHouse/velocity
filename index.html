@@ -1222,7 +1222,7 @@ GROUP BY actor_login, d
 ORDER BY actor_login, d
 `.trim();
 
-            const response = await fetch('https://play.clickhouse.com/?user=play', {
+            const response = await fetch('https://play.clickhouse.com/?user=play&use_query_cache=1&query_cache_ttl=3600', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'text/plain',
@@ -1313,7 +1313,7 @@ WHERE ${repoCondition}
     AND (${metricCondition})
 `.trim();
 
-            const response = await fetch('https://play.clickhouse.com/?user=play', {
+            const response = await fetch('https://play.clickhouse.com/?user=play&use_query_cache=1&query_cache_ttl=3600', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'text/plain',
@@ -1942,7 +1942,7 @@ LIMIT 10
 `.trim();
 
             try {
-                const response = await fetch('https://play.clickhouse.com/?user=play', {
+                const response = await fetch('https://play.clickhouse.com/?user=play&use_query_cache=1&query_cache_ttl=3600', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'text/plain',
