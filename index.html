@@ -1212,7 +1212,7 @@ WHERE repos_condition
         SELECT actor_login
         FROM github_events
         WHERE repos_condition ${dateFilter}
-            AND NOT match(actor_login, '(^(ro)?bot-|-(ro)?bot$|\\[bot\\]|(-commenter|-importer|QA|io|Jenkins)$|CLAassistant|googlebot|^Apache)')
+            AND NOT match(actor_login, '(^(ro)?bot-|-(ro)?bot$|\\[bot\\]|(-commenter|-importer|QA|Jenkins)$|CLAassistant|googlebot|^Apache)')
             AND (opened_prs_cond OR reviewed_prs_cond OR created_issues_cond OR closed_issues_cond OR comments_cond)
         GROUP BY actor_login
         ORDER BY uniq(number) DESC
@@ -1309,7 +1309,7 @@ WHERE ${repoCondition}
     ${actorFilter}
     ${dateFilter}
     ${deletedLoginsFilter}
-    AND NOT match(actor_login, '(^(ro)?bot-|-(ro)?bot$|\\[bot\\]|(-commenter|-importer|QA|io|Jenkins)$|CLAassistant|googlebot|^Apache)')
+    AND NOT match(actor_login, '(^(ro)?bot-|-(ro)?bot$|\\[bot\\]|(-commenter|-importer|QA|Jenkins)$|CLAassistant|googlebot|^Apache)')
     AND (${metricCondition})
 `.trim();
 
