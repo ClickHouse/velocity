@@ -103,6 +103,47 @@
             opacity: 0.7;
             margin-top: 2px;
         }
+
+        @media (max-width: 768px) {
+            #nav-bar {
+                flex-direction: column;
+                gap: 12px;
+                padding: 12px 15px;
+            }
+
+            #commit-info {
+                margin: 0;
+                width: 100%;
+            }
+
+            #commit-message {
+                font-size: 13px;
+            }
+
+            #commit-meta {
+                font-size: 10px;
+            }
+
+            #nav-controls {
+                width: 100%;
+                justify-content: center;
+            }
+
+            button {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+
+            #counter {
+                padding: 8px 16px;
+                font-size: 13px;
+                min-width: 80px;
+            }
+
+            .keyboard-hint {
+                font-size: 10px;
+            }
+        }
     </style>
 </head>
 <body>
